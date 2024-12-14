@@ -11,10 +11,8 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#define SERVERPORT "3490"   //local port number at server
-#define BACKLOG 15    //maximum pending connection queue size
-#define MSG_LEN_LIMIT 256
-
+#define MYPORT "3490"   //local port number at server
+#define BACKLOG 10      //maximum pending connection queue size
 
 void sigchld_handler(int s)
 {
@@ -47,7 +45,7 @@ int main(int argc, char *argv[] ){
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;        //fill in my IP addr, so the first parameter at getaddrinfo can be NULL
 
-    if((ai_status = getaddrinfo(NULL, SERVERPORT, &hints, &serveInfo)) != 0){     //getaddrinfo returns non-zero if failed
+    if((ai_status = getaddrinfo(NULL, MYPORT, &hints, &serveInfo)) != 0){     //getaddrinfo returns non-zero if failed
         fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(ai_status));
         return 1;
     }
@@ -102,17 +100,16 @@ int main(int argc, char *argv[] ){
         }
 
         inet_ntop(their_addr.ss_family, get_in_addr( (struct sockaddr*)&their_addr ), s, sizeof s);
-        printf("server: accepted incomming connection from %s\n", s);
+        printf("server: accepted to %s\n", s);
         
         if(!fork()){    //child
             close(sockfd);
-            char *msg = malloc(MSG_LEN_LIMIT);
-            if(recv(new_fd, msg, MSG_LEN_LIMIT, 0) == -1){
+            char msg[] = "hello world\n";
+            int msg_len = strlen(msg);
+            if(send(new_fd, msg, msg_len, 0) == -1){
                 perror("send");
             }
-            printf("client: %s\n", msg);
             close(new_fd);
-            free(msg);
             return 0;
         }
         close(new_fd);
