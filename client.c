@@ -158,9 +158,10 @@ int spinServer(){
 
 
 int main(int argc, char *argv[]){
+    int sockfd;
+    char msg[MSG_LEN_LIMIT];
 
     //establish connection
-    int sockfd;
     char ipAddr[] = "::1";
     if((sockfd = tryConenct(ipAddr)) < 0){
         //failed to connect, spin up the listenning procedure, this client will serve as server
@@ -177,6 +178,26 @@ int main(int argc, char *argv[]){
     
     //connection established, communication begins
     
+    if(fork()){
+        //parent send msg
+        while(1){
+            printf("me: ");
+            fgets(msg, MSG_LEN_LIMIT-1, stdin);
+            send(sockfd, msg, MSG_LEN_LIMIT-1, 0);
+            printf("me: %s\n", msg);
+        }
+
+    }else{
+        //child receive msg
+        while(1){
+            if(recv(sockfd, msg, MSG_LEN_LIMIT-1, 0) == 0){
+                printf("connection lost\n");
+                return 1;
+            }
+            printf("you: %s\n", msg);
+        }
+
+    }
 
     return 0;
 }
