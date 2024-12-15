@@ -10,9 +10,10 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <arpa/inet.h>
+#include <stdbool.h>
 
 #define CLIENTPORT "4000"
-#define SERVERPORT "3490"
+#define SERVERPORT "4002"
 #define MSG_LEN_LIMIT 256
 #define BACKLOG 10
 
@@ -67,6 +68,7 @@ int tryConenct(char *connectAddr){
         }
 
         if( connect(sockfd, p->ai_addr, p->ai_addrlen) == -1 ){
+            close(sockfd);
             perror("connect");
             continue;
         }
@@ -76,8 +78,6 @@ int tryConenct(char *connectAddr){
     if(p == NULL){
 
         fprintf(stderr, "talker: socket failed\n");
-        printf("hello\n");
-        close(sockfd);
         return -2;
     }
 
@@ -153,13 +153,15 @@ int spinServer(){
     printf("me: accepted incomming connection from %s\n", s);
 
     freeaddrinfo(servinfo);
-    return sockfd;
+    close(sockfd);
+    return new_fd;
 }
 
 
 int main(int argc, char *argv[]){
-    int sockfd;
+    int sockfd, byteReceived;
     char msg[MSG_LEN_LIMIT];
+    bool isServer;
 
     //establish connection
     char ipAddr[] = "::1";
@@ -171,31 +173,39 @@ int main(int argc, char *argv[]){
             return 1;
         }else{
             printf("accepted: sockfd %d\n", sockfd);
+            isServer = true;
         }
     }else{
         printf("connected, sockfd %d\n", sockfd);
+        isServer = false;
     }
     
     //connection established, communication begins
-    
     if(fork()){
         //parent send msg
         while(1){
-            printf("me: ");
-            fgets(msg, MSG_LEN_LIMIT-1, stdin);
-            send(sockfd, msg, MSG_LEN_LIMIT-1, 0);
-            printf("me: %s\n", msg);
+            //printf("me: ");
+            fgets(msg, MSG_LEN_LIMIT, stdin);
+            msg[strcspn(msg, "\n")] = 0;
+            send(sockfd, msg, MSG_LEN_LIMIT, 0);
+            //printf("me: %s\n", msg);
         }
 
     }else{
         //child receive msg
         while(1){
-            if(recv(sockfd, msg, MSG_LEN_LIMIT-1, 0) == 0){
-                printf("connection lost\n");
+            if((byteReceived = recv(sockfd, msg, MSG_LEN_LIMIT, 0) )== -1){
+                perror("recv");
+                continue;
+            }else if(byteReceived == 0){
+                fprintf(stderr, "connection lost");
                 return 1;
             }
-            printf("you: %s\n", msg);
+            //msg[byteReceived] = '\0';
+            printf("otherside: %s\n", msg);
         }
+        
+            
 
     }
 
