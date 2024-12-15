@@ -13,9 +13,11 @@
 #include <stdbool.h>
 
 #define CLIENTPORT "4000"
-#define SERVERPORT "4002"
+#define SERVERPORT "3490"
 #define MSG_LEN_LIMIT 256
 #define BACKLOG 10
+
+pthread_t threads[2];
 
 
 void *get_in_addr(struct sockaddr *sa)
@@ -157,11 +159,41 @@ int spinServer(){
     return new_fd;
 }
 
+void* talk(void* sockfd){
+    char msg[MSG_LEN_LIMIT];
+
+    while(1){
+        //printf("me: ");
+        fgets(msg, MSG_LEN_LIMIT, stdin);
+        msg[strcspn(msg, "\n")] = 0;
+        send(*((int*)sockfd), msg, MSG_LEN_LIMIT, 0);
+        //printf("me: %s\n", msg);
+    }
+    return NULL;
+}
+
+void* listento(void *sockfd){
+    int byteReceived;
+    char msg[MSG_LEN_LIMIT];
+
+    while(1){
+        if((byteReceived = recv(*((int*)sockfd), msg, MSG_LEN_LIMIT, 0) )== -1){
+            perror("recv");
+            continue;
+        }else if(byteReceived == 0){
+            fprintf(stderr, "connection lost");
+            exit(1);
+        }
+        //msg[byteReceived] = '\0';
+        printf("otherside: %s\n", msg);
+    }
+}
 
 int main(int argc, char *argv[]){
-    int sockfd, byteReceived;
-    char msg[MSG_LEN_LIMIT];
+    int sockfd;
     bool isServer;
+    char msg[MSG_LEN_LIMIT];
+    int *fd = (int*)malloc(sizeof(int));
 
     //establish connection
     char ipAddr[] = "::1";
@@ -181,33 +213,11 @@ int main(int argc, char *argv[]){
     }
     
     //connection established, communication begins
-    if(fork()){
-        //parent send msg
-        while(1){
-            //printf("me: ");
-            fgets(msg, MSG_LEN_LIMIT, stdin);
-            msg[strcspn(msg, "\n")] = 0;
-            send(sockfd, msg, MSG_LEN_LIMIT, 0);
-            //printf("me: %s\n", msg);
-        }
-
-    }else{
-        //child receive msg
-        while(1){
-            if((byteReceived = recv(sockfd, msg, MSG_LEN_LIMIT, 0) )== -1){
-                perror("recv");
-                continue;
-            }else if(byteReceived == 0){
-                fprintf(stderr, "connection lost");
-                return 1;
-            }
-            //msg[byteReceived] = '\0';
-            printf("otherside: %s\n", msg);
-        }
-        
-            
-
-    }
-
+    *fd = sockfd;
+    pthread_create(&threads[0], NULL, &talk, fd);
+    pthread_create(&threads[1], NULL, &listento, fd);
+    
+    pthread_join(threads[0], NULL);
+    pthread_join(threads[1], NULL);
     return 0;
 }
