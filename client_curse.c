@@ -8,17 +8,27 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include <ncurses.h>
+
 
 
 #define CLIENTPORT "4000"
 #define SERVERPORT "3490"
 #define MSG_LEN_LIMIT 256
+#define MAX_LINES_HISTORY 100
 #define BACKLOG 10
 
 pthread_t threads[2];
+int writeLine = 0;
+WINDOW *pad;
+int pad_top = 0;
+int pad_left = 0;
+int rows;
+int cols;
+int visible_height = 12 - 2;
+int visible_width = 50 - 2;
 
 
 void *get_in_addr(struct sockaddr *sa)
@@ -161,15 +171,75 @@ int spinServer(){
 }
 
 void* talk(void* sockfd){
-    char msg[MSG_LEN_LIMIT];
+    char *msg = calloc(MSG_LEN_LIMIT, sizeof(char));
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+    getmaxyx(stdscr, rows, cols);
+    int visible_width = cols - 2;
 
-    while(1){
-        //printf("me: ");
-        fgets(msg, MSG_LEN_LIMIT, stdin);
-        msg[strcspn(msg, "\n")] = 0;
-        send(*((int*)sockfd), msg, MSG_LEN_LIMIT, 0);
-        //printf("me: %s\n", msg);
+    int pad_height = 100;
+    int pad_width = cols - 2;
+    WINDOW *pad = newpad(pad_height, pad_width);
+    if (pad == NULL) {
+        endwin();
+        fprintf(stderr, "Error creating pad\n");
+        exit(1);
     }
+
+
+    mvprintw(rows - 1, 0, "type for messaging , 'q' to quit: ");
+    refresh();
+    int ch;
+    while ((ch = getch()) != 'q') {
+        switch (ch) {
+            case KEY_UP:
+                if (pad_top > 0) pad_top--;
+                break;
+            case KEY_DOWN:
+                if (pad_top + visible_height < pad_height) pad_top++;
+                break;
+            // case KEY_LEFT:
+            //     if (pad_left > 0) pad_left--;
+            //     break;
+            // case KEY_RIGHT:
+            //     if (pad_left + visible_width < pad_width) pad_left++;
+            //     break;
+            case 'a':
+                echo();
+                move(rows-1, 0);
+                clrtoeol();
+                refresh();
+                mvprintw(rows - 1, 0, ":");
+                mvgetstr(rows - 1, 2,  msg);
+                send(*((int*)sockfd), msg, MSG_LEN_LIMIT, 0);
+
+                mvwprintw(pad, writeLine, 0, "me: %s", msg);
+                clrtoeol();
+                refresh();
+                noecho();
+                writeLine++;
+                move(rows-1, 0);
+                if (writeLine > visible_height) pad_top++;
+        }
+
+        // Display the pad content within the visible window
+        prefresh(pad, pad_top, pad_left, 0, 0, visible_height, visible_width);
+    }
+
+    free(msg);
+    // Cleanup
+    delwin(pad);
+    endwin();
+
+    // while(1){
+    //     //printf("me: ");
+    //     fgets(msg, MSG_LEN_LIMIT, stdin);
+    //     msg[strcspn(msg, "\n")] = 0;
+    //     send(*((int*)sockfd), msg, MSG_LEN_LIMIT, 0);
+    //     //printf("me: %s\n", msg);
+    // }
     return NULL;
 }
 
@@ -185,8 +255,13 @@ void* listento(void *sockfd){
             fprintf(stderr, "connection lost");
             exit(1);
         }
+        printf("printf: %s\n", msg);
         //msg[byteReceived] = '\0';
-        printf("otherside: %s\n", msg);
+        mvwprintw(pad, writeLine, 0, "they: %s", msg);
+        writeLine++;
+        if (writeLine > visible_height) pad_top++;
+        prefresh(pad, pad_top, pad_left, 0, 0, visible_height, visible_width);
+
     }
 }
 
@@ -216,6 +291,7 @@ int main(int argc, char *argv[]){
     //connection established, communication begins
     *fd = sockfd;
     pthread_create(&threads[0], NULL, &talk, fd);
+    sleep(1);   //use semaphore later
     pthread_create(&threads[1], NULL, &listento, fd);
     
     pthread_join(threads[0], NULL);
