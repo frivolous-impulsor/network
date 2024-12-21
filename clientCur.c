@@ -8,27 +8,30 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <pthread.h>
+#include <semaphore.h>
+#include <ncurses.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
-#include <ncurses.h>
-
 
 
 #define CLIENTPORT "4000"
 #define SERVERPORT "3490"
 #define MSG_LEN_LIMIT 256
-#define MAX_LINES_HISTORY 100
 #define BACKLOG 10
+#define PAD_LENGTH 100
 
 pthread_t threads[2];
-int writeLine = 0;
-WINDOW *pad;
-int pad_top = 0;
-int pad_left = 0;
-int rows;
-int cols;
-int visible_height = 12 - 2;
-int visible_width = 50 - 2;
+
+typedef struct s_threadArgs{
+    int *sockfd;
+    WINDOW *pad;
+    int maxRow;
+    int maxCol;
+    int *pad_top;
+    int *pad_left;
+    int *writeLine;
+    
+} threadArgs;
 
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -169,34 +172,26 @@ int spinServer(){
     return new_fd;
 }
 
-void* talk(void* sockfd){
-    char *msg = calloc(MSG_LEN_LIMIT, sizeof(char));
-    initscr();
-    cbreak();
-    noecho();
-    keypad(stdscr, TRUE);
-    getmaxyx(stdscr, rows, cols);
-    int visible_width = cols - 2;
+void* talk(void* args){
+    char msg[MSG_LEN_LIMIT];
+    threadArgs *targs = (threadArgs*)args;
+    int visible_height = targs->maxRow - 2;
+    int visible_width = targs->maxCol - 2;
+    int pad_height = PAD_LENGTH;
+    int pad_width = targs->maxCol - 2;
 
-    int pad_height = 100;
-    int pad_width = cols - 2;
-    WINDOW *pad = newpad(pad_height, pad_width);
-    if (pad == NULL) {
-        endwin();
-        fprintf(stderr, "Error creating pad\n");
+    if(targs->pad == NULL){
+        printf("pad not available in talk\n");
         exit(1);
     }
-
-    mvprintw(rows - 1, 0, "type for messaging , 'q' to quit: ");
-    refresh();
     int ch;
     while ((ch = getch()) != 'q') {
         switch (ch) {
             case KEY_UP:
-                if (pad_top > 0) pad_top--;
+                if (*(targs->pad_top) > 0) (*(targs->pad_top))--;
                 break;
             case KEY_DOWN:
-                if (pad_top + visible_height < pad_height) pad_top++;
+                if (*(targs->pad_top) + visible_height < pad_height) (*(targs->pad_top))++;
                 break;
             // case KEY_LEFT:
             //     if (pad_left > 0) pad_left--;
@@ -206,66 +201,59 @@ void* talk(void* sockfd){
             //     break;
             case 'a':
                 echo();
-                move(rows-1, 0);
+                move((targs->maxRow)-1, 0);
                 clrtoeol();
                 refresh();
-                mvprintw(rows - 1, 0, ":");
-                mvgetstr(rows - 1, 2,  msg);
-                send(*((int*)sockfd), msg, MSG_LEN_LIMIT, 0);
-
-                mvwprintw(pad, writeLine, 0, "me: %s", msg);
+                mvprintw((targs->maxRow) - 1, 0, ":");
+                mvgetstr((targs->maxRow) - 1, 2,  msg);
+                //integrate the first letter to rest of msg
+                mvwprintw(targs->pad, *(targs->writeLine), 0, "me: %s", msg);
                 clrtoeol();
                 refresh();
                 noecho();
-                writeLine++;
-                move(rows-1, 0);
-                if (writeLine > visible_height) pad_top++;
+                (*(targs->writeLine))++;
+                move((targs->maxRow)-1, 0);
+                if (*(targs->writeLine) > visible_height) (*(targs->pad_top))++;
+                break;
+            default:
+                break;
         }
 
         // Display the pad content within the visible window
-        prefresh(pad, pad_top, pad_left, 0, 0, visible_height, visible_width);
+        prefresh(targs->pad, (*(targs->pad_top)), (*(targs->pad_left)), 0, 0, visible_height, visible_width);
     }
-
-    free(msg);
-    // Cleanup
-    delwin(pad);
-    endwin();
 
     // while(1){
     //     //printf("me: ");
     //     fgets(msg, MSG_LEN_LIMIT, stdin);
     //     msg[strcspn(msg, "\n")] = 0;
-    //     send(*((int*)sockfd), msg, MSG_LEN_LIMIT, 0);
+    //     send(*( targs->sockfd ), msg, MSG_LEN_LIMIT, 0);
     //     //printf("me: %s\n", msg);
     // }
     return NULL;
 }
 
-void* listento(void *sockfd){
+void* listento(void *args){
     int byteReceived;
     char msg[MSG_LEN_LIMIT];
-    
+
+    threadArgs *targs = (threadArgs*)args;
+
+    if(targs->pad == NULL){
+        printf("pad not available in talk\n");
+        exit(1);
+    }
 
     while(1){
-        if((byteReceived = recv(*((int*)sockfd), msg, MSG_LEN_LIMIT, 0) )== -1){
+        if((byteReceived = recv(*( targs->sockfd ), msg, MSG_LEN_LIMIT, 0) )== -1){
             perror("recv");
             continue;
         }else if(byteReceived == 0){
             fprintf(stderr, "connection lost");
             exit(1);
         }
-        //mvwprintf("printf: %s\n", msg);
         //msg[byteReceived] = '\0';
-        if(pad == NULL){
-            printf("pad not available for listen!\n");
-            exit(1);
-        }
-
-        mvwprintw(pad, writeLine, 0, "they: %s", msg);
-        writeLine++;
-        if (writeLine > visible_height) pad_top++;
-        prefresh(pad, pad_top, pad_left, 0, 0, visible_height, visible_width);
-
+        printf("otherside: %s\n", msg);
     }
 }
 
@@ -294,9 +282,41 @@ int main(int argc, char *argv[]){
     
     //connection established, communication begins
     *fd = sockfd;
-    pthread_create(&threads[0], NULL, &talk, fd);
-    sleep(1);   //use semaphore later
-    pthread_create(&threads[1], NULL, &listento, fd);
+
+    //pad setup
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+    int rows, cols, writeLine;
+    getmaxyx(stdscr, rows, cols);
+    int pad_height = 100;
+    int pad_width = cols - 2;
+    WINDOW *pad = newpad(pad_height, pad_width);
+    if (pad == NULL) {
+        endwin();
+        fprintf(stderr, "Error creating pad\n");
+        exit(1);
+    }
+    int pad_top = 0;
+    int pad_left = 0;
+    writeLine = 0;
+
+    mvprintw(rows - 1, 0, "type 'a' for messaging , 'q' to quit: ");
+    refresh();
+
+    threadArgs *tArgs = (threadArgs*)malloc(sizeof(threadArgs));
+    tArgs->maxCol = cols;
+    tArgs->maxRow = rows;
+    tArgs->pad = pad;
+    tArgs->pad_left = &pad_left;
+    tArgs->pad_top = &pad_top;
+    tArgs->writeLine = &writeLine;
+    tArgs->sockfd = fd;
+
+
+    pthread_create(&threads[0], NULL, &talk, tArgs);
+    pthread_create(&threads[1], NULL, &listento, tArgs);
     
     pthread_join(threads[0], NULL);
     pthread_join(threads[1], NULL);
