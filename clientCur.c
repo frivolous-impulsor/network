@@ -206,6 +206,7 @@ void* talk(void* args){
                 refresh();
                 mvprintw((targs->maxRow) - 1, 0, ":");
                 mvgetstr((targs->maxRow) - 1, 2,  msg);
+                send(*( targs->sockfd ), msg, MSG_LEN_LIMIT, 0);
                 //integrate the first letter to rest of msg
                 mvwprintw(targs->pad, *(targs->writeLine), 0, "me: %s", msg);
                 clrtoeol();
@@ -223,13 +224,8 @@ void* talk(void* args){
         prefresh(targs->pad, (*(targs->pad_top)), (*(targs->pad_left)), 0, 0, visible_height, visible_width);
     }
 
-    // while(1){
-    //     //printf("me: ");
-    //     fgets(msg, MSG_LEN_LIMIT, stdin);
-    //     msg[strcspn(msg, "\n")] = 0;
-    //     send(*( targs->sockfd ), msg, MSG_LEN_LIMIT, 0);
-    //     //printf("me: %s\n", msg);
-    // }
+    delwin(targs->pad);
+    endwin();
     return NULL;
 }
 
@@ -238,6 +234,10 @@ void* listento(void *args){
     char msg[MSG_LEN_LIMIT];
 
     threadArgs *targs = (threadArgs*)args;
+    int visible_height = targs->maxRow - 2;
+    int visible_width = targs->maxCol - 2;
+    int pad_height = PAD_LENGTH;
+    int pad_width = targs->maxCol - 2;
 
     if(targs->pad == NULL){
         printf("pad not available in talk\n");
@@ -245,15 +245,21 @@ void* listento(void *args){
     }
 
     while(1){
+        pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
         if((byteReceived = recv(*( targs->sockfd ), msg, MSG_LEN_LIMIT, 0) )== -1){
             perror("recv");
             continue;
         }else if(byteReceived == 0){
-            fprintf(stderr, "connection lost");
+            fprintf(stderr, "\nconnection lost");
             exit(1);
         }
         //msg[byteReceived] = '\0';
-        printf("otherside: %s\n", msg);
+        //printf("otherside: %s\n", msg);
+        mvwprintw(targs->pad, *(targs->writeLine), 0, "they: %s", msg);
+        (*(targs->writeLine))++;
+        if (*(targs->writeLine) > visible_height) (*(targs->pad_top))++;
+        prefresh(targs->pad, (*(targs->pad_top)), (*(targs->pad_left)), 0, 0, visible_height, visible_width);
+
     }
 }
 
@@ -319,6 +325,10 @@ int main(int argc, char *argv[]){
     pthread_create(&threads[1], NULL, &listento, tArgs);
     
     pthread_join(threads[0], NULL);
+    pthread_cancel(threads[1]);
     pthread_join(threads[1], NULL);
+
+
+
     return 0;
 }
