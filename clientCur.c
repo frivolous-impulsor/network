@@ -280,14 +280,79 @@ void* listento(void *args){
     }
 }
 
+int contactChoice(){
+    int ch;
+    int current = 0;
+
+
+
+    mvprintw(0, 1, "Contact From Contact");
+    mvprintw(1, 1, "Contact from IP Address");
+    mvprintw(2, 1, "Get New Contact From Server");
+
+    mvprintw(0,0, ">");
+
+    refresh();
+    while((ch = getch()) != 'Q'){
+        switch (ch){
+            case KEY_UP:
+                current = (((current-1)%3)+3)%3;
+                break;
+            case KEY_DOWN:
+                current = (((current+1)%3)+3)%3;
+                break;
+            case 10:
+                clear();
+                move(0,0);
+                return current;
+            default:
+                break;
+        }
+
+        mvprintw(   (((current-1)%3)+3)%3   , 0, " ");
+        mvprintw(current, 0, ">");
+        mvprintw((((current+1)%3)+3)%3, 0, " ");
+        move(current, 0);
+
+        refresh();
+    }
+    return -1;
+}
+
 int main(int argc, char *argv[]){
-    int sockfd;
+    int sockfd, choice;
     bool isServer;
     char msg[MSG_LEN_LIMIT];
-    int *fd = (int*)malloc(sizeof(int));
+    char ipAddr[INET6_ADDRSTRLEN];
+    int *fd;
+
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+    
+    choice = contactChoice();
+    printf("choice %d\n", choice);
+    echo();
+    if(choice == 0){
+        
+    }else if(choice == 1){
+        printw("IP Address:");
+        mvgetstr(1, 0, ipAddr);
+        
+    }else if(choice == 2){
+
+    }else {
+        perror("unexpected return value from choices\n");
+    }
+    noecho();
+
+    clear();
+    refresh();
+    endwin();
 
     //establish connection
-    char ipAddr[] = "192.168.2.195";
+    strcpy(ipAddr, "::1");
     if((sockfd = tryConenct(ipAddr)) < 0){
         //failed to connect, spin up the listenning procedure, this client will serve as server
         sockfd = spinServer();
@@ -325,7 +390,7 @@ int main(int argc, char *argv[]){
     int pad_left = 0;
     writeLine = 0;
 
-    mvprintw(rows - 1, 0, "type 'a' for messaging , 'Q' to quit: ");
+    mvprintw(rows - 1, 0, "ENTER for messaging , 'Q' to quit: ");
     refresh();
 
     threadArgs *tArgs = (threadArgs*)malloc(sizeof(threadArgs));
