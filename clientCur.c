@@ -8,13 +8,11 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include <ncurses.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
 
 
-#define CLIENTPORT "4000"
 #define SERVERPORT "3490"
 #define MSG_LEN_LIMIT 256
 #define BACKLOG 10
@@ -144,7 +142,7 @@ int spinServer(){
     }
 
     if(p == NULL){
-        fprintf(stderr, "listener: failed to bin socket\n");
+        fprintf(stderr, "listener: failed to bin socket");
         return -2;
     }
 
@@ -179,25 +177,33 @@ void* talk(void* args){
     int visible_width = targs->maxCol - 2;
     int pad_height = PAD_LENGTH;
     int pad_width = targs->maxCol - 2;
+    int *pad_top = targs->pad_top;
+    int *writeLine = targs->writeLine;
 
     if(targs->pad == NULL){
         printf("pad not available in talk\n");
+        endwin();
+        printf("curse mode off\n");
         exit(1);
     }
     int ch;
-    while ((ch = getch()) != 'q') {
+    while ((ch = getch()) != 'Q') {
         switch (ch) {
             case KEY_UP:
-                if (*(targs->pad_top) > 0) (*(targs->pad_top))--;
+                if ((*pad_top) > 0) {
+                    (*pad_top)--;
+                }
                 break;
             case KEY_DOWN:
-                if (*(targs->pad_top) + visible_height < pad_height) (*(targs->pad_top))++;
+                if ((*pad_top) + visible_height < pad_height    &&  ((*writeLine)+1 > ((*pad_top)+ visible_height))){
+                    (*pad_top)++;
+                } 
                 break;
             // case KEY_LEFT:
-            //     if (pad_left > 0) pad_left--;
+            //     if (*(targs->pad_left) > 0) (*(targs->pad_left))--;
             //     break;
             // case KEY_RIGHT:
-            //     if (pad_left + visible_width < pad_width) pad_left++;
+            //     if (*(targs->pad_left) + visible_width < pad_width) (*(targs->pad_left))++;
             //     break;
             case 'a':
                 echo();
@@ -206,15 +212,20 @@ void* talk(void* args){
                 refresh();
                 mvprintw((targs->maxRow) - 1, 0, ":");
                 mvgetstr((targs->maxRow) - 1, 2,  msg);
+
+                if(strlen(msg) == 0){
+                    break;
+                }
+
                 send(*( targs->sockfd ), msg, MSG_LEN_LIMIT, 0);
                 //integrate the first letter to rest of msg
                 mvwprintw(targs->pad, *(targs->writeLine), 0, "me: %s", msg);
                 clrtoeol();
                 refresh();
                 noecho();
-                (*(targs->writeLine))++;
+                (*writeLine)++;
                 move((targs->maxRow)-1, 0);
-                if (*(targs->writeLine) > visible_height) (*(targs->pad_top))++;
+                if (*writeLine > visible_height) (*pad_top)++;
                 break;
             default:
                 break;
@@ -222,10 +233,11 @@ void* talk(void* args){
 
         // Display the pad content within the visible window
         prefresh(targs->pad, (*(targs->pad_top)), (*(targs->pad_left)), 0, 0, visible_height, visible_width);
+        move((targs->maxRow)-1, 2);
+        refresh();
+
     }
 
-    delwin(targs->pad);
-    endwin();
     return NULL;
 }
 
@@ -241,6 +253,8 @@ void* listento(void *args){
 
     if(targs->pad == NULL){
         printf("pad not available in talk\n");
+        endwin();
+        printf("curse mode off\n");
         exit(1);
     }
 
@@ -251,6 +265,9 @@ void* listento(void *args){
             continue;
         }else if(byteReceived == 0){
             fprintf(stderr, "\nconnection lost");
+            delwin(targs->pad);
+            endwin();
+            printf("curse mode off\n");
             exit(1);
         }
         //msg[byteReceived] = '\0';
@@ -270,7 +287,7 @@ int main(int argc, char *argv[]){
     int *fd = (int*)malloc(sizeof(int));
 
     //establish connection
-    char ipAddr[] = "::1";
+    char ipAddr[] = "192.168.2.195";
     if((sockfd = tryConenct(ipAddr)) < 0){
         //failed to connect, spin up the listenning procedure, this client will serve as server
         sockfd = spinServer();
@@ -308,7 +325,7 @@ int main(int argc, char *argv[]){
     int pad_left = 0;
     writeLine = 0;
 
-    mvprintw(rows - 1, 0, "type 'a' for messaging , 'q' to quit: ");
+    mvprintw(rows - 1, 0, "type 'a' for messaging , 'Q' to quit: ");
     refresh();
 
     threadArgs *tArgs = (threadArgs*)malloc(sizeof(threadArgs));
@@ -329,6 +346,8 @@ int main(int argc, char *argv[]){
     pthread_join(threads[1], NULL);
 
 
-
+    delwin(pad);
+    endwin();
+    printf("curse mode off\n");
     return 0;
 }
