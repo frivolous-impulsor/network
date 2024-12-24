@@ -13,6 +13,7 @@ gcc contact.c libsqlite3.a -o contact
 #include <stdbool.h>
 #include <netinet/in.h>
 #include "sqlite3.h"
+#include "linkedList.h"
 
 static int display_records(void *unused, int count, char **data, char **columns){
     int i;
@@ -23,13 +24,31 @@ static int display_records(void *unused, int count, char **data, char **columns)
     return 0;
 }
 
+static int get_all_records(void *result, int count, char **data, char **columns){
+    int i;
+
+
+
+    if(result == NULL){
+        result = "todo";
+    }
+
+    char buf[INET6_ADDRSTRLEN] = {0};
+    strcpy((char*)result, data[2]);
+
+    
+    return 0;
+}
+
 int findAllRecords(sqlite3 *db){
     char *errMsg = 0;
     char searchStmt[128] = {0};
+    Node *result = {0};
     sprintf(searchStmt, "SELECT * FROM Friends");
     printf("%s\n",searchStmt);
+    
 
-    int rc = sqlite3_exec(db, searchStmt, display_records, 0, &errMsg);
+    int rc = sqlite3_exec(db, searchStmt, get_all_records, result, &errMsg);
 
     if(rc != SQLITE_OK){
         fprintf(stderr, "find all records error: %s\n", errMsg);
