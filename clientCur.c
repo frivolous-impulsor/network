@@ -352,7 +352,6 @@ int main(int argc, char *argv[]){
     endwin();
 
     //establish connection
-    strcpy(ipAddr, "::1");
     if((sockfd = tryConenct(ipAddr)) < 0){
         //failed to connect, spin up the listenning procedure, this client will serve as server
         sockfd = spinServer();
@@ -364,7 +363,7 @@ int main(int argc, char *argv[]){
             isServer = true;
         }
     }else{
-        printf("connected, sockfd %d\n", sockfd);
+        printf("connected");
         isServer = false;
     }
     
