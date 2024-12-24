@@ -11,9 +11,7 @@ gcc contact.c libsqlite3.a -o contact
 #include <errno.h>
 #include <string.h>
 #include <stdbool.h>
-
 #include <netinet/in.h>
-
 #include "sqlite3.h"
 
 static int display_records(void *unused, int count, char **data, char **columns){
@@ -24,8 +22,6 @@ static int display_records(void *unused, int count, char **data, char **columns)
     printf("\n");
     return 0;
 }
-
-
 
 int findAllRecords(sqlite3 *db){
     char *errMsg = 0;
@@ -54,20 +50,18 @@ static int get_IP(void *result, int count, char **data, char **columns){
     return 0;
 }
 
-int findIPfromName(sqlite3 *db, char *name, char *resultIP){
+void findIPfromName(sqlite3 *db, char *name, char *resultIP){
     char *errMsg = 0;
     char searchStmt[128] = {0};
     sprintf(searchStmt, "SELECT * FROM Friends WHERE Name = '%s'", name);
-    printf("%s\n",searchStmt);
+    //printf("%s\n",searchStmt);
 
     int rc = sqlite3_exec(db, searchStmt, get_IP, resultIP, &errMsg);
 
     if(rc != SQLITE_OK){
         fprintf(stderr, "find by name error: %s\n", errMsg);
         sqlite3_free(errMsg);
-        return 1;
     }
-    return 0;
 }
 
 
@@ -80,7 +74,7 @@ int insertRecord(sqlite3 *db, char *name, char *IP){
     //printf("%s\n",insertStmt);
     int rc = sqlite3_exec(db, insertStmt, 0, 0, &errMsg);
     if(rc != SQLITE_OK){
-        fprintf(stderr, "insert error: %s\n", errMsg);
+        //fprintf(stderr, "insert error: %s\n", errMsg);
         sqlite3_free(errMsg);
         return 1;
     }
@@ -92,7 +86,7 @@ sqlite3* setUpDB(){
     sqlite3 *db;
     char *errMsg = 0;
 
-    int rc = sqlite3_open("contact.db", &db);
+    int rc = sqlite3_open("PRCS/contact.db", &db);
     if(rc != SQLITE_OK){
         fprintf(stderr, "failed to open database: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
@@ -106,13 +100,22 @@ sqlite3* setUpDB(){
         sqlite3_close(db);
         return NULL;
     }
+
+    insertRecord(db, "me", "::1");
+
     return db;
 }
 
 int main(){
     sqlite3 *contactDB = setUpDB();
-    //insertRecord(contactDB, "oliver", "192.168.2.196");
+    insertRecord(contactDB, "oliver", "192.168.2.196");
     char result[INET6_ADDRSTRLEN] = {0};
     findIPfromName(contactDB, "oliver", result);
 
+    if(!(*result)){
+        printf("found nothing!\n");
+    }else{
+        printf("IP: %s\n", result);
+    }
+    
 }
