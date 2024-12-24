@@ -7,9 +7,13 @@ gcc contact.c libsqlite3.a -o contact
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <stdbool.h>
+
+#include <netinet/in.h>
+
 #include "sqlite3.h"
 
 static int display_records(void *unused, int count, char **data, char **columns){
@@ -21,22 +25,7 @@ static int display_records(void *unused, int count, char **data, char **columns)
     return 0;
 }
 
-static int get_records(void *unused, int count, char **data, char **columns){
-    int i;
-    FILE *recordsFile;
 
-    recordsFile = open("PRCS/records.csv", "a");
-
-    char line[256] = {0};
-    for(i = 0; i < count-1; i++){
-        sprintf(line, "%s,", data[i]);
-    }
-    sprintf( "%s\n", data[i]);
-    fprintf(recordsFile, line);
-    
-    close(recordsFile);
-    return 0;
-}
 
 int findAllRecords(sqlite3 *db){
     char *errMsg = 0;
@@ -44,7 +33,7 @@ int findAllRecords(sqlite3 *db){
     sprintf(searchStmt, "SELECT * FROM Friends");
     printf("%s\n",searchStmt);
 
-    int rc = sqlite3_exec(db, searchStmt, get_records, 0, &errMsg);
+    int rc = sqlite3_exec(db, searchStmt, display_records, 0, &errMsg);
 
     if(rc != SQLITE_OK){
         fprintf(stderr, "find all records error: %s\n", errMsg);
@@ -54,13 +43,24 @@ int findAllRecords(sqlite3 *db){
     return 0;
 }
 
-int findIPfromName(sqlite3 *db, char *name){
+static int get_IP(void *result, int count, char **data, char **columns){
+    int i;
+
+
+    char buf[INET6_ADDRSTRLEN] = {0};
+    strcpy((char*)result, data[2]);
+
+    
+    return 0;
+}
+
+int findIPfromName(sqlite3 *db, char *name, char *resultIP){
     char *errMsg = 0;
     char searchStmt[128] = {0};
     sprintf(searchStmt, "SELECT * FROM Friends WHERE Name = '%s'", name);
     printf("%s\n",searchStmt);
 
-    int rc = sqlite3_exec(db, searchStmt, display_records, 0, &errMsg);
+    int rc = sqlite3_exec(db, searchStmt, get_IP, resultIP, &errMsg);
 
     if(rc != SQLITE_OK){
         fprintf(stderr, "find by name error: %s\n", errMsg);
@@ -88,7 +88,7 @@ int insertRecord(sqlite3 *db, char *name, char *IP){
     return 0;
 }
 
-int setUpDB(){
+sqlite3* setUpDB(){
     sqlite3 *db;
     char *errMsg = 0;
 
@@ -96,13 +96,23 @@ int setUpDB(){
     if(rc != SQLITE_OK){
         fprintf(stderr, "failed to open database: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
-        return 1;
+        return NULL;
     }
 
     char *createTableStmt = "CREATE TABLE IF NOT EXISTS Friends(Id INTEGER PRIMARY KEY, Name TEXT UNIQUE, IP TEXT UNIQUE)";
-    return 0;
+    rc = sqlite3_exec(db, createTableStmt, NULL, NULL, &errMsg);
+    if(rc != SQLITE_OK){
+        fprintf(stderr, "failed to create Friends: %s\n", errMsg);
+        sqlite3_close(db);
+        return NULL;
+    }
+    return db;
 }
 
-int closeDB(){
+int main(){
+    sqlite3 *contactDB = setUpDB();
+    //insertRecord(contactDB, "oliver", "192.168.2.196");
+    char result[INET6_ADDRSTRLEN] = {0};
+    findIPfromName(contactDB, "oliver", result);
 
 }
