@@ -11,6 +11,11 @@
 #include <ncurses.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include "contactDB.h"
+
+/*
+gcc contactDB.c libsqlite3.a linkedList.c clientCur.c -lncurses  -o client 
+*/
 
 
 #define SERVERPORT "3490"
@@ -319,6 +324,11 @@ int contactChoice(){
     return -1;
 }
 
+int selectFromContact(char* result){
+    return 0;
+}
+
+
 int main(int argc, char *argv[]){
     int sockfd, choice;
     bool isServer;
@@ -335,6 +345,8 @@ int main(int argc, char *argv[]){
     printf("choice %d\n", choice);
     echo();
     if(choice == 0){
+
+        selectFromContact(ipAddr);
         
     }else if(choice == 1){
         printw("IP Address:");

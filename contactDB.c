@@ -1,19 +1,10 @@
 /*
 compile shortcut:
 
-gcc contact.c libsqlite3.a -o contact
+gcc contactDB.c libsqlite3.a linkedList.c  -o contact
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <stdbool.h>
-#include <netinet/in.h>
-#include "sqlite3.h"
-#include "linkedList.h"
+#include "contactDB.h"
 
 static int display_records(void *unused, int count, char **data, char **columns){
     int i;
@@ -25,29 +16,22 @@ static int display_records(void *unused, int count, char **data, char **columns)
 }
 
 static int get_all_records(void *result, int count, char **data, char **columns){
-    int i;
 
+    Node* node = malloc(sizeof(Node));
+    node->IP = malloc(sizeof(INET6_ADDRSTRLEN));
+    node->Name = malloc(sizeof(NAME_LEN_LIMIT));
+    strcpy(node->Name, data[1]);
+    strcpy(node->IP, data[2]);
+    append_list((List*)result, node);
 
-
-    if(result == NULL){
-        result = "todo";
-    }
-
-    char buf[INET6_ADDRSTRLEN] = {0};
-    strcpy((char*)result, data[2]);
-
-    
     return 0;
 }
 
-int findAllRecords(sqlite3 *db){
+int findAllRecords(sqlite3 *db, List* result){
     char *errMsg = 0;
     char searchStmt[128] = {0};
-    Node *result = {0};
     sprintf(searchStmt, "SELECT * FROM Friends");
-    printf("%s\n",searchStmt);
     
-
     int rc = sqlite3_exec(db, searchStmt, get_all_records, result, &errMsg);
 
     if(rc != SQLITE_OK){
@@ -125,16 +109,23 @@ sqlite3* setUpDB(){
     return db;
 }
 
-int main(){
+int test_db(){
     sqlite3 *contactDB = setUpDB();
-    insertRecord(contactDB, "oliver", "192.168.2.196");
-    char result[INET6_ADDRSTRLEN] = {0};
-    findIPfromName(contactDB, "oliver", result);
-
-    if(!(*result)){
-        printf("found nothing!\n");
-    }else{
-        printf("IP: %s\n", result);
-    }
+    List* records = initailize_list();
     
+    char* result = malloc(sizeof(INET6_ADDRSTRLEN));
+    findIPfromName(contactDB, "oliv", result);
+    //findAllRecords(contactDB, records);
+    print_list(records);
+    if((*result) == 0 ){
+        printf("NULL\n");
+
+    }else{
+        printf("Result: %s\n", result);
+
+    }
+    free(result);
+    destroy_list(records);
+    sqlite3_close(contactDB);
+    return 0;
 }

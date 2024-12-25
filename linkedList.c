@@ -31,7 +31,7 @@ void print_list(List *list){
     }else{
         Node* current = list->head;
         while(current){
-            printf("%-10s: %s\n", current->Name, current->IP);
+            printf("%-32s: %-s\n", current->Name, current->IP);
             current = current->next;
         }
     }
@@ -39,9 +39,10 @@ void print_list(List *list){
 }
 
 
-void destroy_list(List *list){
+int destroy_list(List *list){
     if( isEmptyList(list) ){
         free(list);
+        return 0;
     }
 
     Node* current = list->head;
@@ -54,10 +55,11 @@ void destroy_list(List *list){
         free(temp);    
     };
     free(list);
+    return 1;
 }
 
 
-int test(){
+int test_linkList(){
     List *list = initailize_list();
     Node* new = malloc(sizeof(Node));
     new->IP = strdup("newIp");
@@ -77,4 +79,6 @@ int test(){
     print_list(list);
 
     destroy_list(list);
+
+    return 0;
 }

@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <string.h>
 
+#define NAME_LEN_LIMIT 32
+
 typedef struct Node{
     char *Name;
     char *IP;
@@ -23,6 +25,7 @@ int isEmptyList(List *list);
 
 int append_list(List *list, Node *node);
 
-void destroy_list(List *list);
+int destroy_list(List *list);
 
+void print_list(List *list);
 #endif
