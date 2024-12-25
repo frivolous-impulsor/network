@@ -225,7 +225,7 @@ void* talk(void* args){
 
                 send(*( targs->sockfd ), msg, MSG_LEN_LIMIT, 0);
                 //integrate the first letter to rest of msg
-                mvwprintw(targs->pad, *(targs->writeLine), 0, "me: %s", msg);
+                mvwprintw(targs->pad, *(targs->writeLine), 0, ": %s", msg);
                 clrtoeol();
                 refresh();
                 noecho();
@@ -362,6 +362,13 @@ int selectFromContact(char* name, char* IP){
                 currentI = (((currentI+1)%i)+i)%i;
                 mvprintw(currentI, 0, ">");
                 break;
+            case KEY_LEFT:
+                clear();
+                return 0;
+            case KEY_RIGHT:
+                clear();
+                move(0,0);
+                selected = 1;
             case 10:
                 clear();
                 move(0,0);
@@ -384,40 +391,88 @@ int selectFromContact(char* name, char* IP){
     return -1;
 }
 
+int inputIP(char* name, char* IP){
+    printw("IP Address:");  
+    mvgetstr(1, 0, IP);
+    strcpy(name, "they");
+    return 1;
+}
+
+int createContact(char* name, char* IP, char *path){
+    sqlite3* contactDB = setUpDB(path);
+    
+    mvprintw(0, 0, "Name: ");
+    refresh();
+    mvgetstr(1, 0, name);
+    clear();
+
+    mvprintw(0, 0, "IP: ");
+    refresh();
+    mvgetstr(1, 0, IP);
+    clear();
+
+
+    insertRecord(contactDB, name, IP);
+
+    return 0;
+}
+
+int getNameIP(char *name, char *IP){
+    int choice;
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+
+    while(1){
+        choice = contactChoice();
+        printf("choice %d\n", choice);
+        echo();
+        if(choice == 0){
+            if(selectFromContact(name, IP)){
+                break;
+            }else{
+                continue;
+            }
+        }else if(choice == 1){
+            if(inputIP(name, IP)){
+                break;
+            }else{
+                continue;
+            }
+            
+            
+        }else if(choice == 2){
+            char* path = strdup("PRCS/contact.db");
+            createContact(name, IP, path);
+            continue;
+        }else {
+            perror("unexpected return value from choices\n");
+        }
+        noecho();
+    }
+    
+
+
+    clear();
+    refresh();
+    endwin();
+    return 0;
+}
+
+
 
 int main(int argc, char *argv[]){
-    int sockfd, choice;
+    int sockfd;
     bool isServer;
     char *msg = calloc(MSG_LEN_LIMIT, sizeof(char));
     char *ipAddr = calloc(INET6_ADDRSTRLEN, sizeof(char));
     char *name = calloc(NAME_LEN_LIMIT, sizeof(char));
     int *fd = malloc(sizeof(int));
 
-    initscr();
-    cbreak();
-    noecho();
-    keypad(stdscr, TRUE);
-    
-    choice = contactChoice();
-    printf("choice %d\n", choice);
-    echo();
-    if(choice == 0){
-        selectFromContact(name, ipAddr);
-    }else if(choice == 1){
-        printw("IP Address:");
-        mvgetstr(1, 0, ipAddr);
-        strcpy(name, "they");
-        
-    }else if(choice == 2){
+    getNameIP(name, ipAddr);
 
-    }else {
-        perror("unexpected return value from choices\n");
-    }
-    noecho();
 
-    clear();
-    refresh();
-    endwin();
 
     //establish connection
     if((sockfd = tryConenct(ipAddr)) < 0){
@@ -431,7 +486,7 @@ int main(int argc, char *argv[]){
             isServer = true;
         }
     }else{
-        printf("connected");
+        printf("connected\n");
         isServer = false;
     }
     
