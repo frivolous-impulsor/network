@@ -33,6 +33,7 @@ typedef struct s_threadArgs{
     int *pad_top;
     int *pad_left;
     int *writeLine;
+    char* name;
     
 } threadArgs;
 
@@ -277,7 +278,7 @@ void* listento(void *args){
         }
         //msg[byteReceived] = '\0';
         //printf("otherside: %s\n", msg);
-        mvwprintw(targs->pad, *(targs->writeLine), 0, "they: %s", msg);
+        mvwprintw(targs->pad, *(targs->writeLine), 0, "%s: %s", targs->name, msg);
         (*(targs->writeLine))++;
         if (*(targs->writeLine) > visible_height) (*(targs->pad_top))++;
         prefresh(targs->pad, (*(targs->pad_top)), (*(targs->pad_left)), 0, 0, visible_height, visible_width);
@@ -306,7 +307,7 @@ int contactChoice(){
             case KEY_DOWN:
                 current = (((current+1)%3)+3)%3;
                 break;
-            case 10:
+            case KEY_RIGHT:
                 clear();
                 move(0,0);
                 return current;
@@ -324,7 +325,7 @@ int contactChoice(){
     return -1;
 }
 
-int selectFromContact(char* result){
+int selectFromContact(char* name, char* IP){
     int ch, i, selected, currentI;
     currentI = 0;
     selected = 0;
@@ -374,7 +375,8 @@ int selectFromContact(char* result){
                 current = current->next;
                 currentI--;
             }
-            strcpy(result, current->IP);
+            strcpy(IP, current->IP);
+            strcpy(name, current->Name);
             return i;
         }
         refresh();
@@ -386,9 +388,10 @@ int selectFromContact(char* result){
 int main(int argc, char *argv[]){
     int sockfd, choice;
     bool isServer;
-    char msg[MSG_LEN_LIMIT];
-    char ipAddr[INET6_ADDRSTRLEN];
-    int *fd;
+    char *msg = calloc(MSG_LEN_LIMIT, sizeof(char));
+    char *ipAddr = calloc(INET6_ADDRSTRLEN, sizeof(char));
+    char *name = calloc(NAME_LEN_LIMIT, sizeof(char));
+    int *fd = malloc(sizeof(int));
 
     initscr();
     cbreak();
@@ -399,15 +402,14 @@ int main(int argc, char *argv[]){
     printf("choice %d\n", choice);
     echo();
     if(choice == 0){
-
-        selectFromContact(ipAddr);
-        
+        selectFromContact(name, ipAddr);
     }else if(choice == 1){
         printw("IP Address:");
         mvgetstr(1, 0, ipAddr);
+        strcpy(name, "they");
         
     }else if(choice == 2){
-        
+
     }else {
         perror("unexpected return value from choices\n");
     }
@@ -466,6 +468,7 @@ int main(int argc, char *argv[]){
     tArgs->pad_top = &pad_top;
     tArgs->writeLine = &writeLine;
     tArgs->sockfd = fd;
+    tArgs->name = strdup(name);
 
 
     pthread_create(&threads[0], NULL, &talk, tArgs);
@@ -475,7 +478,10 @@ int main(int argc, char *argv[]){
     pthread_cancel(threads[1]);
     pthread_join(threads[1], NULL);
 
-
+    free(ipAddr);
+    free(msg);
+    free(name);
+    free(fd);
     delwin(pad);
     endwin();
     printf("curse mode off\n");

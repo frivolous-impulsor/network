@@ -1,0 +1,31 @@
+---
+triple:          'x86_64-apple-darwin'
+binary-path:     client
+relocations:
+  - { offsetInCU: 0x26, offset: 0x26, size: 0x8, addend: 0x0, symName: _findAllRecords, symObjAddr: 0x0, symBinAddr: 0x100000C80, symSize: 0x120 }
+  - { offsetInCU: 0xAE, offset: 0xAE, size: 0x8, addend: 0x0, symName: _findAllRecords, symObjAddr: 0x0, symBinAddr: 0x100000C80, symSize: 0x120 }
+  - { offsetInCU: 0x113, offset: 0x113, size: 0x8, addend: 0x0, symName: _get_all_records, symObjAddr: 0x120, symBinAddr: 0x100000DA0, symSize: 0xA0 }
+  - { offsetInCU: 0x173, offset: 0x173, size: 0x8, addend: 0x0, symName: _findIPfromName, symObjAddr: 0x1C0, symBinAddr: 0x100000E40, symSize: 0x100 }
+  - { offsetInCU: 0x1E3, offset: 0x1E3, size: 0x8, addend: 0x0, symName: _get_IP, symObjAddr: 0x2C0, symBinAddr: 0x100000F40, symSize: 0x80 }
+  - { offsetInCU: 0x256, offset: 0x256, size: 0x8, addend: 0x0, symName: _insertRecord, symObjAddr: 0x340, symBinAddr: 0x100000FC0, symSize: 0x110 }
+  - { offsetInCU: 0x2CA, offset: 0x2CA, size: 0x8, addend: 0x0, symName: _setUpDB, symObjAddr: 0x450, symBinAddr: 0x1000010D0, symSize: 0x100 }
+  - { offsetInCU: 0x32A, offset: 0x32A, size: 0x8, addend: 0x0, symName: _test_db, symObjAddr: 0x550, symBinAddr: 0x1000011D0, symSize: 0xB3 }
+  - { offsetInCU: 0x26, offset: 0x3DC, size: 0x8, addend: 0x0, symName: _initailize_list, symObjAddr: 0x0, symBinAddr: 0x1000F5F30, symSize: 0x20 }
+  - { offsetInCU: 0x41, offset: 0x3F7, size: 0x8, addend: 0x0, symName: _initailize_list, symObjAddr: 0x0, symBinAddr: 0x1000F5F30, symSize: 0x20 }
+  - { offsetInCU: 0x69, offset: 0x41F, size: 0x8, addend: 0x0, symName: _isEmptyList, symObjAddr: 0x20, symBinAddr: 0x1000F5F50, symSize: 0x30 }
+  - { offsetInCU: 0x91, offset: 0x447, size: 0x8, addend: 0x0, symName: _append_list, symObjAddr: 0x50, symBinAddr: 0x1000F5F80, symSize: 0x80 }
+  - { offsetInCU: 0xD5, offset: 0x48B, size: 0x8, addend: 0x0, symName: _print_list, symObjAddr: 0xD0, symBinAddr: 0x1000F6000, symSize: 0x80 }
+  - { offsetInCU: 0x115, offset: 0x4CB, size: 0x8, addend: 0x0, symName: _destroy_list, symObjAddr: 0x150, symBinAddr: 0x1000F6080, symSize: 0xA0 }
+  - { offsetInCU: 0x167, offset: 0x51D, size: 0x8, addend: 0x0, symName: _test_linkList, symObjAddr: 0x1F0, symBinAddr: 0x1000F6120, symSize: 0x103 }
+  - { offsetInCU: 0x26, offset: 0x608, size: 0x8, addend: 0x0, symName: _get_in_addr, symObjAddr: 0x0, symBinAddr: 0x1000F6230, symSize: 0x40 }
+  - { offsetInCU: 0x4D, offset: 0x62F, size: 0x8, addend: 0x0, symName: _threads, symBinAddr: 0x100109DA0, symSize: 0x0 }
+  - { offsetInCU: 0x216, offset: 0x7F8, size: 0x8, addend: 0x0, symName: _get_in_addr, symObjAddr: 0x0, symBinAddr: 0x1000F6230, symSize: 0x40 }
+  - { offsetInCU: 0x23E, offset: 0x820, size: 0x8, addend: 0x0, symName: _sendAll, symObjAddr: 0x40, symBinAddr: 0x1000F6270, symSize: 0xA0 }
+  - { offsetInCU: 0x2AC, offset: 0x88E, size: 0x8, addend: 0x0, symName: _tryConenct, symObjAddr: 0xE0, symBinAddr: 0x1000F6310, symSize: 0x200 }
+  - { offsetInCU: 0x34C, offset: 0x92E, size: 0x8, addend: 0x0, symName: _spinServer, symObjAddr: 0x2E0, symBinAddr: 0x1000F6510, symSize: 0x340 }
+  - { offsetInCU: 0x429, offset: 0xA0B, size: 0x8, addend: 0x0, symName: _talk, symObjAddr: 0x620, symBinAddr: 0x1000F6850, symSize: 0x3F0 }
+  - { offsetInCU: 0x4D9, offset: 0xABB, size: 0x8, addend: 0x0, symName: _listento, symObjAddr: 0xA10, symBinAddr: 0x1000F6C40, symSize: 0x210 }
+  - { offsetInCU: 0x56C, offset: 0xB4E, size: 0x8, addend: 0x0, symName: _contactChoice, symObjAddr: 0xC20, symBinAddr: 0x1000F6E50, symSize: 0x1F0 }
+  - { offsetInCU: 0x5A5, offset: 0xB87, size: 0x8, addend: 0x0, symName: _selectFromContact, symObjAddr: 0xE10, symBinAddr: 0x1000F7040, symSize: 0x2B0 }
+  - { offsetInCU: 0x683, offset: 0xC65, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x10C0, symBinAddr: 0x1000F72F0, symSize: 0x3DA }
+...
