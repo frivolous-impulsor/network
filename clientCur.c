@@ -293,7 +293,7 @@ int contactChoice(){
 
     mvprintw(0, 1, "Contact From Contact");
     mvprintw(1, 1, "Contact from IP Address");
-    mvprintw(2, 1, "Get New Contact From Server");
+    mvprintw(2, 1, "Add New Contact");
 
     mvprintw(0,0, ">");
 
@@ -325,7 +325,61 @@ int contactChoice(){
 }
 
 int selectFromContact(char* result){
-    return 0;
+    int ch, i, selected, currentI;
+    currentI = 0;
+    selected = 0;
+
+    char* path = strdup("PRCS/contact.db");
+
+    sqlite3* contactDB = setUpDB(path);
+    List* records = initailize_list();
+    findAllRecords(contactDB, records);
+    i = 0;
+    if( isEmptyList(records) ){
+        mvprintw(0,0, "list empty\n");
+        return 0;
+    }else{
+        Node* current = records->head;
+        while(current){
+            mvprintw(i, 1, "%-32s: %-s\n", current->Name, current->IP);
+            current = current->next;
+            i++;
+        }
+    }
+    mvprintw(0,0, ">");
+    refresh();
+    while((ch = getch()) != 'Q'){
+        switch (ch){
+            case KEY_UP:
+                mvprintw(currentI, 0, " ");
+                currentI = (((currentI-1)%i)+i)%i;
+                mvprintw(currentI, 0, ">");
+
+                break;
+            case KEY_DOWN:
+                mvprintw(currentI, 0, " ");
+                currentI = (((currentI+1)%i)+i)%i;
+                mvprintw(currentI, 0, ">");
+                break;
+            case 10:
+                clear();
+                move(0,0);
+                selected = 1;
+            default:
+                break;
+        }
+        if(selected){
+            Node* current = records->head;
+            while(currentI){
+                current = current->next;
+                currentI--;
+            }
+            strcpy(result, current->IP);
+            return i;
+        }
+        refresh();
+    }
+    return -1;
 }
 
 
@@ -353,7 +407,7 @@ int main(int argc, char *argv[]){
         mvgetstr(1, 0, ipAddr);
         
     }else if(choice == 2){
-
+        
     }else {
         perror("unexpected return value from choices\n");
     }

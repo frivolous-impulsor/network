@@ -85,11 +85,11 @@ int insertRecord(sqlite3 *db, char *name, char *IP){
     return 0;
 }
 
-sqlite3* setUpDB(){
+sqlite3* setUpDB(char* dbPath){
     sqlite3 *db;
     char *errMsg = 0;
 
-    int rc = sqlite3_open("PRCS/contact.db", &db);
+    int rc = sqlite3_open(dbPath, &db);
     if(rc != SQLITE_OK){
         fprintf(stderr, "failed to open database: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
@@ -110,7 +110,8 @@ sqlite3* setUpDB(){
 }
 
 int test_db(){
-    sqlite3 *contactDB = setUpDB();
+    char* path = strdup("PRCS/contact.db");
+    sqlite3 *contactDB = setUpDB(path);
     List* records = initailize_list();
     
     char* result = malloc(sizeof(INET6_ADDRSTRLEN));

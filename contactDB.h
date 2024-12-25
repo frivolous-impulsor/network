@@ -23,4 +23,4 @@ void findIPfromName(sqlite3 *db, char *name, char *resultIP);
 
 int insertRecord(sqlite3 *db, char *name, char *IP);
 
-sqlite3* setUpDB();
+sqlite3* setUpDB(char* dbPath);
