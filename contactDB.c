@@ -84,11 +84,11 @@ int insertRecord(sqlite3 *db, char *name, char *IP){
     return 0;
 }
 
-int deleteRecord(sqlite3 *db, char *Id){
+int deleteRecord(sqlite3 *db, char *name){
     char *errMsg = 0;
 
     char insertStmt[128] = {0};
-    sprintf(insertStmt, "DELETE FROM Friends WHERE Id = '%s'", Id);
+    sprintf(insertStmt, "DELETE FROM Friends WHERE name = '%s'", name);
     int rc = sqlite3_exec(db, insertStmt, 0, 0, &errMsg);
     if(rc != SQLITE_OK){
         //fprintf(stderr, "insert error: %s\n", errMsg);

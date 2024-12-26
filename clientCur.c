@@ -329,6 +329,7 @@ int contactChoice(){
 int selectFromContact(char* name, char* IP){
     int ch, i, selected, currentI;
     currentI = 0;
+    int count;
     selected = 0;
     char Id[20];
 
@@ -352,7 +353,9 @@ int selectFromContact(char* name, char* IP){
     }
     mvprintw(0,0, ">");
     refresh();
+    Node* current = records->head;
     while((ch = getch()) != 'Q'){
+
         switch (ch){
             case KEY_UP:
                 mvprintw(currentI, 0, " ");
@@ -375,8 +378,12 @@ int selectFromContact(char* name, char* IP){
                 selected = 1;
                 break;
             case 'D':
-                sprintf(Id, "%d", currentI+1);
-                deleteRecord(contactDB, Id);
+                count = currentI;
+                while(count){
+                    current = current->next;
+                    count--;
+                }
+                deleteRecord(contactDB, current->Name);
                 destroy_list(records);
                 clear();
                 return 0;
