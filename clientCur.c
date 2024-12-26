@@ -217,7 +217,7 @@ void* talk(void* args){
                 clrtoeol();
                 refresh();
                 mvprintw((targs->maxRow) - 1, 0, ":");
-                mvgetstr((targs->maxRow) - 1, 2,  msg);
+                mvgetnstr((targs->maxRow) - 1, 2,  msg, targs->maxCol);
 
                 if(strlen(msg) == 0){
                     break;
@@ -308,6 +308,7 @@ int contactChoice(){
                 current = (((current+1)%3)+3)%3;
                 break;
             case KEY_RIGHT:
+            case 10:
                 clear();
                 move(0,0);
                 return current;
@@ -342,7 +343,7 @@ int selectFromContact(char* name, char* IP){
     }else{
         Node* current = records->head;
         while(current){
-            mvprintw(i, 1, "%-32s: %-s\n", current->Name, current->IP);
+            mvprintw(i, 1, "%-10s: %-46s\n", current->Name, current->IP);
             current = current->next;
             i++;
         }
@@ -364,15 +365,13 @@ int selectFromContact(char* name, char* IP){
                 break;
             case KEY_LEFT:
                 clear();
+                destroy_list(records);
                 return 0;
             case KEY_RIGHT:
                 clear();
                 move(0,0);
                 selected = 1;
-            case 10:
-                clear();
-                move(0,0);
-                selected = 1;
+                break;
             default:
                 break;
         }
@@ -384,6 +383,7 @@ int selectFromContact(char* name, char* IP){
             }
             strcpy(IP, current->IP);
             strcpy(name, current->Name);
+            destroy_list(records);
             return i;
         }
         refresh();
@@ -393,7 +393,7 @@ int selectFromContact(char* name, char* IP){
 
 int inputIP(char* name, char* IP){
     printw("IP Address:");  
-    mvgetstr(1, 0, IP);
+    mvgetnstr(1, 0, IP, INET_ADDRSTRLEN-1);
     strcpy(name, "they");
     return 1;
 }
@@ -403,12 +403,12 @@ int createContact(char* name, char* IP, char *path){
     
     mvprintw(0, 0, "Name: ");
     refresh();
-    mvgetstr(1, 0, name);
+    mvgetnstr(1, 0, name, NAME_LEN_LIMIT);
     clear();
 
     mvprintw(0, 0, "IP: ");
     refresh();
-    mvgetstr(1, 0, IP);
+    mvgetnstr(1, 0, IP, INET_ADDRSTRLEN-1);
     clear();
 
 
@@ -429,11 +429,13 @@ int getNameIP(char *name, char *IP){
         printf("choice %d\n", choice);
         echo();
         if(choice == 0){
+            noecho();
             if(selectFromContact(name, IP)){
                 break;
             }else{
                 continue;
             }
+            echo();
         }else if(choice == 1){
             if(inputIP(name, IP)){
                 break;
