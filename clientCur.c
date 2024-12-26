@@ -330,6 +330,8 @@ int selectFromContact(char* name, char* IP){
     int ch, i, selected, currentI;
     currentI = 0;
     selected = 0;
+    char Id[20];
+
 
     char* path = strdup("PRCS/contact.db");
 
@@ -372,6 +374,13 @@ int selectFromContact(char* name, char* IP){
                 move(0,0);
                 selected = 1;
                 break;
+            case 'D':
+                sprintf(Id, "%d", currentI+1);
+                deleteRecord(contactDB, Id);
+                destroy_list(records);
+                clear();
+                return 0;
+            
             default:
                 break;
         }

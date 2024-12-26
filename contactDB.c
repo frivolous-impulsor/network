@@ -68,13 +68,27 @@ void findIPfromName(sqlite3 *db, char *name, char *resultIP){
 }
 
 
-
 int insertRecord(sqlite3 *db, char *name, char *IP){
     char *errMsg = 0;
 
     char insertStmt[128] = {0};
     sprintf(insertStmt, "INSERT INTO Friends(Name, IP) VALUES('%s', '%s')", name, IP);
     //printf("%s\n",insertStmt);
+    int rc = sqlite3_exec(db, insertStmt, 0, 0, &errMsg);
+    if(rc != SQLITE_OK){
+        //fprintf(stderr, "insert error: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        return 1;
+    }
+    
+    return 0;
+}
+
+int deleteRecord(sqlite3 *db, char *Id){
+    char *errMsg = 0;
+
+    char insertStmt[128] = {0};
+    sprintf(insertStmt, "DELETE FROM Friends WHERE Id = '%s'", Id);
     int rc = sqlite3_exec(db, insertStmt, 0, 0, &errMsg);
     if(rc != SQLITE_OK){
         //fprintf(stderr, "insert error: %s\n", errMsg);

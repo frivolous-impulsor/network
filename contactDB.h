@@ -20,7 +20,8 @@ int findAllRecords(sqlite3 *db, List* result);
 
 void findIPfromName(sqlite3 *db, char *name, char *resultIP);
 
-
 int insertRecord(sqlite3 *db, char *name, char *IP);
+
+int deleteRecord(sqlite3 *db, char *Id);
 
 sqlite3* setUpDB(char* dbPath);
