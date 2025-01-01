@@ -14,7 +14,7 @@
 #include "contactDB.h"
 
 /*
-gcc contactDB.c libsqlite3.a linkedList.c clientCur.c -lncurses  -o client 
+gcc contactDB.c libsqlite3.a linkedList.c clientCur.c -lncurses  -o client
 */
 
 
@@ -555,6 +555,7 @@ int main(int argc, char *argv[]){
     free(msg);
     free(name);
     free(fd);
+    free(tArgs);
     delwin(pad);
     endwin();
     printf("curse mode off\n");
