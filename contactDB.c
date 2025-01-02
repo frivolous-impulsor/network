@@ -17,11 +17,14 @@ static int display_records(void *unused, int count, char **data, char **columns)
 
 static int get_all_records(void *result, int count, char **data, char **columns){
 
-    Node* node = malloc(sizeof(Node));
-    node->IP = malloc(sizeof(INET6_ADDRSTRLEN));
-    node->Name = malloc(sizeof(NAME_LEN_LIMIT));
+    Node* node = (Node*)malloc(sizeof(Node));
+
+    node->Name = malloc(NAME_LEN_LIMIT);
     strcpy(node->Name, data[1]);
+
+    node->IP = malloc(INET6_ADDRSTRLEN);
     strcpy(node->IP, data[2]);
+
     append_list((List*)result, node);
 
     return 0;
@@ -71,12 +74,12 @@ void findIPfromName(sqlite3 *db, char *name, char *resultIP){
 int insertRecord(sqlite3 *db, char *name, char *IP){
     char *errMsg = 0;
 
-    char insertStmt[128] = {0};
+    char insertStmt[1024] = {0};
     sprintf(insertStmt, "INSERT INTO Friends(Name, IP) VALUES('%s', '%s')", name, IP);
     //printf("%s\n",insertStmt);
     int rc = sqlite3_exec(db, insertStmt, 0, 0, &errMsg);
     if(rc != SQLITE_OK){
-        //fprintf(stderr, "insert error: %s\n", errMsg);
+        fprintf(stderr, "insert error: %s\n", errMsg);
         sqlite3_free(errMsg);
         return 1;
     }
@@ -124,22 +127,23 @@ sqlite3* setUpDB(char* dbPath){
 }
 
 int test_db(){
-    char* path = strdup("PRCS/contact.db");
+    char* path = strdup("PRCS/test.db");
     sqlite3 *contactDB = setUpDB(path);
     List* records = initailize_list();
+    printf("inited\n");
+    char* name = malloc(NAME_LEN_LIMIT);
+    char* IP = malloc(INET6_ADDRSTRLEN);
+    strcpy(name, "test2");
+    strcpy(IP, "12997890987898921299");
     
-    char* result = malloc(sizeof(INET6_ADDRSTRLEN));
-    findIPfromName(contactDB, "oliv", result);
-    //findAllRecords(contactDB, records);
+    insertRecord(contactDB, name, IP);
+    printf("inserted");
+
+    findAllRecords(contactDB, records);
+    printf("found records\n");
+
     print_list(records);
-    if((*result) == 0 ){
-        printf("NULL\n");
 
-    }else{
-        printf("Result: %s\n", result);
-
-    }
-    free(result);
     destroy_list(records);
     sqlite3_close(contactDB);
     return 0;

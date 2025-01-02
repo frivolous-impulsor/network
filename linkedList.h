@@ -17,9 +17,10 @@ typedef struct Node{
 
 typedef struct List{
     Node *head;
+    Node *tail;
 } List;
 
-List *initailize_list();
+List* initailize_list();
 
 int isEmptyList(List *list);
 

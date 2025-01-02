@@ -331,7 +331,6 @@ int selectFromContact(char* name, char* IP){
     currentI = 0;
     int count;
     selected = 0;
-    char Id[20];
 
 
     char* path = strdup("PRCS/contact.db");
@@ -409,7 +408,7 @@ int selectFromContact(char* name, char* IP){
 
 int inputIP(char* name, char* IP){
     printw("IP Address:");  
-    mvgetnstr(1, 0, IP, INET_ADDRSTRLEN-1);
+    mvgetnstr(1, 0, IP, INET6_ADDRSTRLEN+1);
     strcpy(name, "they");
     return 1;
 }
@@ -424,7 +423,7 @@ int createContact(char* name, char* IP, char *path){
 
     mvprintw(0, 0, "IP: ");
     refresh();
-    mvgetnstr(1, 0, IP, INET_ADDRSTRLEN-1);
+    mvgetnstr(1, 0, IP, INET6_ADDRSTRLEN+1);
     clear();
 
 

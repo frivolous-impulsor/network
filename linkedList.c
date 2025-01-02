@@ -1,8 +1,10 @@
 #include "linkedList.h"
 
-List *initailize_list(){
-    List* list = malloc(sizeof(List));
-    return list;
+List* initailize_list(){
+    List* linked = malloc(sizeof(List));
+    linked->head = NULL;
+    linked->tail = NULL;
+    return linked;
 }
 
 int isEmptyList(List *list){
@@ -15,13 +17,11 @@ int isEmptyList(List *list){
 int append_list(List *list, Node *node){
     if( isEmptyList(list) ){
         list->head = node;
+        list->tail = node;
         return 0;
     }
-    Node* current = list->head;
-    while(current->next){
-        current = current->next;
-    }
-    current->next = node;
+    list->tail->next = node;
+    list->tail = node;
     return 1;
 }
 
