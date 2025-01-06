@@ -1,14 +1,7 @@
 /*
 gcc encryption.c -o encryption -lgmp
 */
-
-#include <stdio.h>
-#include <gmp.h>
-#include <assert.h>
-#include <unistd.h>
-#include <stdlib.h>
-
-
+#include "rsa.h"
 
 int genPrime(mpz_t num, gmp_randstate_t s, int n){
     int isPrime;
@@ -90,7 +83,7 @@ int decrypt_rsa(mpz_t y, mpz_t d, mpz_t n, int *plaintext){
 
 
 
-int main(){
+int test_rsa(){
 
     mpz_t n, d, e;
     mpz_init(n);

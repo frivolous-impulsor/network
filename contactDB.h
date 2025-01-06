@@ -3,6 +3,7 @@ compile shortcut:
 
 gcc SRC/contactDB.c SRC/libsqlite3.a SRC/linkedList.c  -o SRC/contact
 */
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
