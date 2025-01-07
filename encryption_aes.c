@@ -4,6 +4,7 @@
 #include <string.h>
 
 #define BLOCK_SIZE 16
+#define ROUNDS 10
 
 //pad the message to a length of a multiple of 16-bytes
 int getPaddedSize(int size){
@@ -49,15 +50,32 @@ void printBlock(char* block){
 void shiftRow(char* block, int row, int turns){
     char shadow, current;
     int i, col;
+    if (abs(turns) == 2 ){
+        turns = abs(turns);
+        for(i = 0; i < turns; i++){
+            shadow = *(block + 3*4 + row);
+            *(block + 3*4 + row) = *(block + 2*4 + row);
+            *(block + 2*4 + row) = *(block + 1*4 + row);
+            *(block + 1*4 + row) = *(block + 0*4 + row);
+            *(block + 0*4 + row) = shadow;
 
-    for(i = 0; i < turns; i++){
+        }
+    }else if(turns == 1 || turns == -3){
         shadow = *(block + 3*4 + row);
         *(block + 3*4 + row) = *(block + 2*4 + row);
         *(block + 2*4 + row) = *(block + 1*4 + row);
         *(block + 1*4 + row) = *(block + 0*4 + row);
         *(block + 0*4 + row) = shadow;
+    }else if(turns == 3 || turns == -1){
+        shadow = *(block + 0*4 + row);
+        *(block + 0*4 + row) = *(block + 1*4 + row);
+        *(block + 1*4 + row) = *(block + 2*4 + row);
+        *(block + 2*4 + row) = *(block + 3*4 + row);
+        *(block + 3*4 + row) = shadow;
 
     }
+
+
 }
 
 //shift each rows rightwards individual scale => difusion
@@ -71,7 +89,7 @@ void shiftRows(char* block){
 void invShiftRows(char* block){
     int row;
     for(row = 1; row<4; row++){
-        shiftRow(block, row, row);
+        shiftRow(block, row, -row);
     }
 }
 
@@ -91,7 +109,13 @@ int main(){
 
     for(i = 0; i < paddedSize/BLOCK_SIZE; i++){
         sBoxSub(padded+i*BLOCK_SIZE);
+        printBlock(padded+i*BLOCK_SIZE);
+        printf("\n");
         shiftRows(padded+i*BLOCK_SIZE);
+        printBlock(padded+i*BLOCK_SIZE);
+        printf("\n");
+
+        invShiftRows(padded+i*BLOCK_SIZE);
         printBlock(padded+i*BLOCK_SIZE);
     }    
 
