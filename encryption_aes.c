@@ -6,6 +6,13 @@
 #define BLOCK_SIZE 16
 #define ROUNDS 10
 
+
+// a lookup table of non-linear permutation of any char value to another cahr value => confusion
+const *S_Box = "";
+
+// inverse loopup table to sBox
+const *invS_Box = "";
+
 //pad the message to a length of a multiple of 16-bytes
 int getPaddedSize(int size){
     int nextSize, reminder;
