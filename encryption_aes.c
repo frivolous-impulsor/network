@@ -73,7 +73,6 @@ void inv_sBoxSub(uint8_t* block){
     for(i = 0; i<BLOCK_SIZE; i++){
         *(block+i) = rsbox[ *(block+i) ];
     }
-    printf("\n");
 }
 
 //print the block in AES form for debugging
@@ -265,13 +264,20 @@ void cipherDistroy(uint8_t* cipher){
 }
 
 
-void encrypt_aes(char* text, int size, uint8_t* key){
-    int r, s, blockNum, paddedSize, i, round;
+uint8_t* encrypt_aes(char* text, int size, uint8_t* key, int* cipherSize){
+    int r, s, paddedSize, blockNum, i, round;
     //uint8_t* roundKeys = malloc(sizeof(uint8_t)*11*4*4);
 
     //keyExpansion(roundKeys, key);
 
     uint8_t* padded = cipherInit(text, size, &paddedSize);
+    
+    for(int z = 0; z < paddedSize; z++){
+        printf("%02x", *(padded+z));
+    }
+    printf("\n");
+
+    *cipherSize = paddedSize;
 
     blockNum = paddedSize/BLOCK_SIZE;
 
@@ -285,31 +291,61 @@ void encrypt_aes(char* text, int size, uint8_t* key){
             sBoxSub(block);
             shiftRows(block);
             if(round == 10){
+                addRoundKey(block, key);
                 break;
             }
             mixCols(block);
             addRoundKey(block, key);
         }
-        addRoundKey(block, key);
     }
     for(int z = 0; z < paddedSize; z++){
-        printf("%x", *(padded+z));
+        printf("%02x", *(padded+z));
     }
+    printf("\n");
+
     //free(roundKeys);
-    cipherDistroy(padded);
+    return padded;
 }
 
-void decrypt_aes(char* cipher, int size, char* text, char* key){
+void decrypt_aes(uint8_t* padded, int paddedSize, uint8_t* key){
+    int i, round;
+    for (i = 0; i<paddedSize/BLOCK_SIZE; i++){
+        uint8_t* block = padded+i*BLOCK_SIZE;
+        round = 0;
+        addRoundKey(block, key);
+        for(round = 9; ; round--){
+            invShiftRows(block);
+            inv_sBoxSub(block);
+            addRoundKey(block, key);
+            if(round == 0){
+                break;
+            }
+            inv_mixCol(block);
+        }
 
+    }
+    for(int z = 0; z < paddedSize; z++){
+        printf("%02x", *(padded+z));
+    }
+    printf("\n");
 
 }
 
 
 int main(){
+    uint8_t* cipher;
+    int cipherSize;
     char* msg = "helloworldhello0";
     int size = strlen(msg);
-    
+
+
+    char* rev[256];
+
     uint8_t key[] = "2b7e151628aed289";
-    encrypt_aes(msg, size, key);
+    cipher = encrypt_aes(msg, size, key, &cipherSize);
+
+    decrypt_aes(cipher, cipherSize, key);
+
+    cipherDistroy(cipher);
     return 0;
 }
