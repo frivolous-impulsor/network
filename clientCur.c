@@ -15,7 +15,7 @@
 #include "encryption_aes.h"
 
 /*
-gcc contactDB.c libsqlite3.a linkedList.c clientCur.c -lncurses  -o client
+gcc contactDB.c libsqlite3.a linkedList.c clientCur.c encryption_aes.c -lncurses  -o client
 */
 
 
@@ -35,6 +35,7 @@ typedef struct s_threadArgs{
     int *pad_left;
     int *writeLine;
     char* name;
+    uint8_t* aes_key;
     
 } threadArgs;
 
@@ -179,6 +180,7 @@ int spinServer(){
 
 void* talk(void* args){
     char msg[MSG_LEN_LIMIT];
+    int size;
     threadArgs *targs = (threadArgs*)args;
     int visible_height = targs->maxRow - 2;
     int visible_width = targs->maxCol - 2;
@@ -186,6 +188,11 @@ void* talk(void* args){
     int pad_width = targs->maxCol - 2;
     int *pad_top = targs->pad_top;
     int *writeLine = targs->writeLine;
+
+    uint8_t* key = targs->aes_key;
+    uint8_t* cipher;
+    int cipherSize;
+
 
     if(targs->pad == NULL){
         printf("pad not available in talk\n");
@@ -219,12 +226,14 @@ void* talk(void* args){
                 refresh();
                 mvprintw((targs->maxRow) - 1, 0, ":");
                 mvgetnstr((targs->maxRow) - 1, 2,  msg, targs->maxCol);
-
-                if(strlen(msg) == 0){
+                size = strlen(msg);
+                if(size == 0){
                     break;
                 }
+                cipher = encrypt_aes(msg, size, key, &cipherSize);
 
-                send(*( targs->sockfd ), msg, MSG_LEN_LIMIT, 0);
+                send(*( targs->sockfd ), cipher, MSG_LEN_LIMIT, 0);
+                cipherDistroy(cipher);
                 //integrate the first letter to rest of msg
                 mvwprintw(targs->pad, *(targs->writeLine), 0, ": %s", msg);
                 clrtoeol();
@@ -257,6 +266,8 @@ void* listento(void *args){
     int visible_width = targs->maxCol - 2;
     int pad_height = PAD_LENGTH;
     int pad_width = targs->maxCol - 2;
+    uint8_t* key = targs->aes_key;
+    
 
     if(targs->pad == NULL){
         printf("pad not available in talk\n");
@@ -279,6 +290,9 @@ void* listento(void *args){
         }
         //msg[byteReceived] = '\0';
         //printf("otherside: %s\n", msg);
+
+        decrypt_aes((uint8_t*)msg, MSG_LEN_LIMIT, key);
+
         mvwprintw(targs->pad, *(targs->writeLine), 0, "%s: %s", targs->name, msg);
         (*(targs->writeLine))++;
         if (*(targs->writeLine) > visible_height) (*(targs->pad_top))++;
@@ -533,6 +547,8 @@ int main(int argc, char *argv[]){
     mvprintw(rows - 1, 0, "ENTER for messaging , 'Q' to quit: ");
     refresh();
 
+    uint8_t key[] = "2b7e151628aed289";
+
     threadArgs *tArgs = (threadArgs*)malloc(sizeof(threadArgs));
     tArgs->maxCol = cols;
     tArgs->maxRow = rows;
@@ -542,6 +558,7 @@ int main(int argc, char *argv[]){
     tArgs->writeLine = &writeLine;
     tArgs->sockfd = fd;
     tArgs->name = strdup(name);
+    tArgs->aes_key = key;
 
 
     pthread_create(&threads[0], NULL, &talk, tArgs);

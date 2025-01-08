@@ -266,10 +266,6 @@ uint8_t* encrypt_aes(char* text, int size, uint8_t* key, int* cipherSize){
 
     uint8_t* padded = cipherInit(text, size, &paddedSize);
     
-    for(int z = 0; z < paddedSize; z++){
-        printf("%02x", *(padded+z));
-    }
-    printf("\n");
 
     *cipherSize = paddedSize;
 
@@ -292,10 +288,6 @@ uint8_t* encrypt_aes(char* text, int size, uint8_t* key, int* cipherSize){
             addRoundKey(block, key);
         }
     }
-    for(int z = 0; z < paddedSize; z++){
-        printf("%02x", *(padded+z));
-    }
-    printf("\n");
 
     //free(roundKeys);
     return padded;
