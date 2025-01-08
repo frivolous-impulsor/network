@@ -12,6 +12,7 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include "contactDB.h"
+#include "encryption_aes.h"
 
 /*
 gcc contactDB.c libsqlite3.a linkedList.c clientCur.c -lncurses  -o client

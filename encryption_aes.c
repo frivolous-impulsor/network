@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-
-#define BLOCK_SIZE 16
-#define ROUNDS 10
+#include "encryption_aes.h"
 
 
 // a lookup table of non-linear permutation of any char value to another cahr value => confusion
@@ -324,18 +318,21 @@ void decrypt_aes(uint8_t* padded, int paddedSize, uint8_t* key){
         }
 
     }
-    for(int z = 0; z < paddedSize; z++){
-        printf("%02x", *(padded+z));
-    }
-    printf("\n");
+
+    // for(int z = 0; z < paddedSize; z++){
+    //     printf("%02x", *(padded+z));
+    // }
+    // printf("\n");
 
 }
 
 
-int main(){
+
+
+int test_aes(){
     uint8_t* cipher;
     int cipherSize;
-    char* msg = "helloworldhello0";
+    char* msg = "a";
     int size = strlen(msg);
 
 
@@ -345,7 +342,11 @@ int main(){
     cipher = encrypt_aes(msg, size, key, &cipherSize);
 
     decrypt_aes(cipher, cipherSize, key);
-
+    for(int z = 0; z < cipherSize; z++){
+        printf("%02x", *(cipher+z));
+    }
+    printf("\n");
+    printf("%s", cipher);
     cipherDistroy(cipher);
     return 0;
 }
