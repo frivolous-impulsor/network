@@ -81,14 +81,14 @@ void printBlock(uint8_t* block){
     int row, col;
     for(row = 0; row < 4; row++){
         for(col = 0; col < 4; col++){
-            printf("%x ", *(block + col*4 + row));
+            printf("%02x ", *(block + col*4 + row));
         }
         printf("\n");
     }
 }
 
 //shift row theses turns, positive turns for right and negative turns for left
-void shiftRow(char* block, int row, int turns){
+void shiftRow(uint8_t* block, int row, int turns){
     char shadow, current;
     int i, col;
     if (abs(turns) == 2 ){
@@ -120,47 +120,196 @@ void shiftRow(char* block, int row, int turns){
 }
 
 //shift each rows rightwards individual scale => difusion
-void shiftRows(char* block){
+void shiftRows(uint8_t* block){
     int row;
     for(row = 1; row<4; row++){
         shiftRow(block, row, row);
     }
 }
 
-void invShiftRows(char* block){
+static void invShiftRows(uint8_t* block){
     int row;
     for(row = 1; row<4; row++){
         shiftRow(block, row, -row);
     }
 }
 
-void encrypt_aes(char* text, int size, char* cipher, char* key);
 
-void decrypt_aes(char* cipher, int size, char* text, char* key);
+//mix column copied from https://github.com/kokke/tiny-AES-c/blob/master/aes.c#L458
+//I can't wrap my head around how this actually achieved the effect of matric mult in GF
+static uint8_t doubleX(uint8_t x){
+    return ((x<<1) ^ (((x>>7) & 1) * 0x1b));
+}
 
-int main(){
-    int size, r, s, blockNum, paddedSize, i;
-    char received[] = "abcdefghi";
-    size = strlen(received);
-    paddedSize = getPaddedSize(size);
-    uint8_t* padded = calloc(paddedSize, sizeof(char));
-    strcpy((char*)padded, received);
+static void mixCols(uint8_t* block){
+    int col, adj;
+    uint8_t base, temp, t;
+    for(col = 0; col<4; col++){
+        adj = col*4;
+        t = *(block + adj + 0);
+        base = *(block + adj + 0) ^ *(block + adj + 1) ^ *(block + adj + 2) ^ *(block + adj + 3);
+        temp = *(block + adj + 0) ^ *(block + adj + 1); temp = doubleX(temp); *(block + adj + 0) ^= temp ^ base;
+        temp = *(block + adj + 1) ^ *(block + adj + 2); temp = doubleX(temp); *(block + adj + 1) ^= temp ^ base;
+        temp = *(block + adj + 2) ^ *(block + adj + 3); temp = doubleX(temp); *(block + adj + 2) ^= temp ^ base;
+        temp = *(block + adj + 3) ^ t;                  temp = doubleX(temp); *(block + adj + 3) ^= temp ^ base;
+    }
+}
+
+static uint8_t Multiply(uint8_t x, uint8_t y)
+{
+  return (((y & 1) * x) ^
+       ((y>>1 & 1) * doubleX(x)) ^
+       ((y>>2 & 1) * doubleX(doubleX(x))) ^
+       ((y>>3 & 1) * doubleX(doubleX(doubleX(x)))) ^
+       ((y>>4 & 1) * doubleX(doubleX(doubleX(doubleX(x)))))); /* this last call to doubleX() can be omitted */
+}
+
+static void inv_mixCol(uint8_t* block){
+    int col;
+    uint8_t a, b, c, d;
+    for (col = 0; col < 4; col++){
+        a = *(block + col*4 + 0);
+        b = *(block + col*4 + 1);
+        c = *(block + col*4 + 2);
+        d = *(block + col*4 + 3);
+
+        *(block + col*4 + 0) = Multiply(a, 0x0e) ^ Multiply(b, 0x0b) ^ Multiply(c, 0x0d) ^ Multiply(d, 0x09);
+        *(block + col*4 + 1) = Multiply(a, 0x09) ^ Multiply(b, 0x0e) ^ Multiply(c, 0x0b) ^ Multiply(d, 0x0d);
+        *(block + col*4 + 2) = Multiply(a, 0x0d) ^ Multiply(b, 0x09) ^ Multiply(c, 0x0e) ^ Multiply(d, 0x0b);
+        *(block + col*4 + 3) = Multiply(a, 0x0b) ^ Multiply(b, 0x0d) ^ Multiply(c, 0x09) ^ Multiply(d, 0x0e);
+        
+    }
+}
+
+//expand 11 keys for 10 rounds, each key of 16-bytes
+//expand from key, which is 16-bytes. The key will also serve at the 0th key of roundKeys
+static void keyExpansion(uint8_t* roundKeys, uint8_t* key){
+    int i, k, j;
+    uint8_t tempa[4]; // Used for the column/row operations
+    const uint8_t Rcon[11] = {
+        0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 };
+
+
+    for(i = 0; i<4; i++){
+        *(roundKeys + i*4 + 0) = *(key + i*4 +0);
+        *(roundKeys + i*4 + 1) = *(key + i*4 +1);
+        *(roundKeys + i*4 + 2) = *(key + i*4 +2);
+        *(roundKeys + i*4 + 3) = *(key + i*4 +3);
+    }
+
+    // All other round keys are found from the previous round keys.
+    for (i = 4; i < 4 * (10 + 1); ++i)
+    {
+        {
+        k = (i - 1) * 4;
+        tempa[0]=roundKeys[k + 0];
+        tempa[1]=roundKeys[k + 1];
+        tempa[2]=roundKeys[k + 2];
+        tempa[3]=roundKeys[k + 3];
+
+        }
+
+        if (i % 4 == 0)
+        {
+            // This function shifts the 4 bytes in a word to the left once.
+            // [a0,a1,a2,a3] becomes [a1,a2,a3,a0]
+
+            // Function RotWord()
+            {
+                const uint8_t u8tmp = tempa[0];
+                tempa[0] = tempa[1];
+                tempa[1] = tempa[2];
+                tempa[2] = tempa[3];
+                tempa[3] = u8tmp;
+            }
+
+            // SubWord() is a function that takes a four-byte input word and 
+            // applies the S-box to each of the four bytes to produce an output word.
+
+            // Function Subword()
+            {
+                tempa[0] = sbox[tempa[0]];
+                tempa[1] = sbox[tempa[1]];
+                tempa[2] = sbox[tempa[2]];
+                tempa[3] = sbox[tempa[3]];
+            }
+
+            tempa[0] = tempa[0] ^ Rcon[i/4];
+        }
+
+        j = i * 4; k=(i - 4) * 4;
+        roundKeys[j + 0] = roundKeys[k + 0] ^ tempa[0];
+        roundKeys[j + 1] = roundKeys[k + 1] ^ tempa[1];
+        roundKeys[j + 2] = roundKeys[k + 2] ^ tempa[2];
+        roundKeys[j + 3] = roundKeys[k + 3] ^ tempa[3];
+    }
+}
+
+
+void addRoundKey(uint8_t* block, uint8_t* keys){
+    int i;
+    for(i = 0; i<16; i++){
+        *(block + i) ^= *(keys);
+    }
+}
+
+uint8_t* cipherInit(char* text, int textSize, int* paddedSize){
+    *paddedSize = getPaddedSize(textSize);
+    uint8_t* padded = calloc(*paddedSize, sizeof(char));
+    strcpy((char*)padded, text);
+    return padded;
+}
+
+void cipherDistroy(uint8_t* cipher){
+    free(cipher);
+}
+
+
+void encrypt_aes(char* text, int size, uint8_t* key){
+    int r, s, blockNum, paddedSize, i, round;
+    //uint8_t* roundKeys = malloc(sizeof(uint8_t)*11*4*4);
+
+    //keyExpansion(roundKeys, key);
+
+    uint8_t* padded = cipherInit(text, size, &paddedSize);
 
     blockNum = paddedSize/BLOCK_SIZE;
 
+    //for each block
     for(i = 0; i < paddedSize/BLOCK_SIZE; i++){
-        printBlock(padded+i*BLOCK_SIZE);
-        printf("\n");
+        uint8_t* block = padded+i*BLOCK_SIZE;
+        
+        addRoundKey(block, key);
 
-        sBoxSub(padded+i*BLOCK_SIZE);
-        printBlock(padded+i*BLOCK_SIZE);
-        printf("\n");
+        for(round = 1; ; round++){
+            sBoxSub(block);
+            shiftRows(block);
+            if(round == 10){
+                break;
+            }
+            mixCols(block);
+            addRoundKey(block, key);
+        }
+        addRoundKey(block, key);
+    }
+    for(int z = 0; z < paddedSize; z++){
+        printf("%x", *(padded+z));
+    }
+    //free(roundKeys);
+    cipherDistroy(padded);
+}
 
-        inv_sBoxSub(padded+i*BLOCK_SIZE);
-        printBlock(padded+i*BLOCK_SIZE);
-    }    
+void decrypt_aes(char* cipher, int size, char* text, char* key){
 
 
-    free(padded);
+}
+
+
+int main(){
+    char* msg = "helloworldhello0";
+    int size = strlen(msg);
+    
+    uint8_t key[] = "2b7e151628aed289";
+    encrypt_aes(msg, size, key);
     return 0;
 }
