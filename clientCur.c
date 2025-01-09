@@ -12,15 +12,16 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include "contactDB.h"
+#include "rsa.h"
 #include "encryption_aes.h"
 
 /*
-gcc contactDB.c libsqlite3.a linkedList.c clientCur.c encryption_aes.c -lncurses  -o client
+gcc contactDB.c libsqlite3.a linkedList.c clientCur.c rsa.c encryption_aes.c -lncurses -lgmp -o client
 */
 
 
 #define SERVERPORT "3490"
-#define MSG_LEN_LIMIT 256
+#define MSG_LEN_LIMIT 512
 #define BACKLOG 10
 #define PAD_LENGTH 100
 
@@ -232,7 +233,8 @@ void* talk(void* args){
                 }
                 cipher = encrypt_aes(msg, size, key, &cipherSize);
 
-                send(*( targs->sockfd ), cipher, MSG_LEN_LIMIT, 0);
+                //send(*( targs->sockfd ), cipher, MSG_LEN_LIMIT, 0);
+                sendAll(*( targs->sockfd ), (char*)cipher, MSG_LEN_LIMIT);
                 cipherDistroy(cipher);
                 //integrate the first letter to rest of msg
                 mvwprintw(targs->pad, *(targs->writeLine), 0, ": %s", msg);
@@ -492,9 +494,64 @@ int getNameIP(char *name, char *IP){
     return 0;
 }
 
+void genKeyForAES(uint8_t* key, int size){
+    for(int i = 0; i<size; i++){
+        *(key+i) = rand();
+    }
+}
+
+void recvKeyAES(uint8_t* key, int* fd){
+    //server gen
+    mpz_t n, d, e, y;
+    int size;
+    mpz_init(n);
+    mpz_init(d);
+    mpz_init(e);
+    mpz_init(y);
+    mpz_set_ui(e, 65537);
+    keyGen(n, e, d);
+
+    char n_str[MSG_LEN_LIMIT];
+    mpz_get_str(n_str, 10, n);
+    send(*fd, n_str, MSG_LEN_LIMIT, 0);
+
+
+    // printf("sent n:\n");
+    // mpz_out_str(stdout, 10, n);
+
+    char enc_key_str[MSG_LEN_LIMIT];
+    recv(*fd, enc_key_str, MSG_LEN_LIMIT, 0);
+
+    mpz_set_str(y, enc_key_str, 10);
+
+    decrypt_rsa(y, );
+    //recv(*fd, key, MSG_LEN_LIMIT, 0);
+    strcpy((char*)key, "f18272972dfabf12");
+
+}
+
+void sendKeyAES(uint8_t* key, int*fd){
+    mpz_t n, e, y;
+    mpz_init(n);
+    mpz_init(e);
+    mpz_init(y);
+    mpz_set_ui(e, 65537);
+
+    char n_str[MSG_LEN_LIMIT];
+    recv(*fd, n_str, MSG_LEN_LIMIT, 0);
+    mpz_set_str(n, n_str, 10);
+
+    encrypt_rsa(key, AES_KEY_SIZE, e, n, y);
+
+    char enc_key_str[MSG_LEN_LIMIT];
+    mpz_get_str(enc_key_str, 10, y);
+    send(*fd, enc_key_str, MSG_LEN_LIMIT, 0);
+
+}
 
 
 int main(int argc, char *argv[]){
+    srand ((unsigned int) time (NULL));
     int sockfd;
     bool isServer;
     char *msg = calloc(MSG_LEN_LIMIT, sizeof(char));
@@ -503,8 +560,6 @@ int main(int argc, char *argv[]){
     int *fd = malloc(sizeof(int));
 
     getNameIP(name, ipAddr);
-
-
 
     //establish connection
     if((sockfd = tryConenct(ipAddr)) < 0){
@@ -521,10 +576,29 @@ int main(int argc, char *argv[]){
         printf("connected\n");
         isServer = false;
     }
-    
-    //connection established, communication begins
+    //connection established, exchange key
     *fd = sockfd;
 
+    uint8_t key[17];
+
+    if(isServer){
+        //sever: receive key
+        recvKeyAES(key, fd);
+
+    }else{
+        //client: generate key, send key
+
+        //genKeyForAES(key, AES_KEY_SIZE);
+        strcpy((char*)key, "f18272972dfabf12");
+        sendKeyAES(key, fd);
+        
+
+    }
+
+    //
+
+
+    //communication begins,
     //pad setup
     initscr();
     cbreak();
@@ -547,7 +621,6 @@ int main(int argc, char *argv[]){
     mvprintw(rows - 1, 0, "ENTER for messaging , 'Q' to quit: ");
     refresh();
 
-    uint8_t key[] = "2b7e151628aed289";
 
     threadArgs *tArgs = (threadArgs*)malloc(sizeof(threadArgs));
     tArgs->maxCol = cols;

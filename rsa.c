@@ -51,8 +51,8 @@ int keyGen(mpz_t n, mpz_t e, mpz_t d){
     mpz_init(p);
     mpz_init(q);
     mpz_init(phi_n);
-    genPrime(p, state, 1024);
-    genPrime(q, state, 1024);
+    genPrime(p, state, 100);
+    genPrime(q, state, 100);
     getN(n, p, q);
     get_phi_N(phi_n, p, q);
 
@@ -95,7 +95,7 @@ int decrypt_rsa(mpz_t y, mpz_t d, mpz_t n, uint8_t *key, int size){
         mpz_sub(temp, x, temp);
         current = mpz_get_ui(temp);
         *(key+z) = current;
-        printf("%c ", *(key+z));
+        //printf("%c ", *(key+z));
 
         mpz_div_ui(x, x, 256);
     }
@@ -103,8 +103,8 @@ int decrypt_rsa(mpz_t y, mpz_t d, mpz_t n, uint8_t *key, int size){
 }
 
 
-
 int test_rsa(){
+    srand ((unsigned int) time (NULL));
     mpz_t n, d, e;
     int size;
     mpz_init(n);
@@ -120,15 +120,34 @@ int test_rsa(){
     //bob:
     mpz_t y;
     mpz_init(y);
-    uint8_t send_msg[] = "2b329823adf121cc";
+    uint8_t send_msg[] = "f18272972dfabf12";
+    //genKeyForAES(send_msg, AES_KEY_SIZE);
+
     size = strlen((char*)send_msg);
     encrypt_rsa(send_msg, size, e, n, y);
 
     //alice:
-    uint8_t *recv_msg = calloc(MSG_LEN_LIMIT, sizeof(char));
+    uint8_t recv_msg[MSG_LEN_LIMIT];
+    memset(recv_msg, 0, MSG_LEN_LIMIT);
     
     decrypt_rsa(y, d, n, recv_msg, size);
-    printf("\nreceived: %s\n", recv_msg);
+
+
+    printf("sent:   ");
+    for(int x = 0; x<AES_KEY_SIZE; x++){
+        printf("%02x", *(send_msg+x));
+
+    }
+    printf("\nrecv:   ");
+
+
+    for(int x = 0; x<AES_KEY_SIZE; x++){
+        printf("%02x", *(recv_msg+x));
+
+    }
+
+    assert(!strncmp((char*)send_msg, (char*)recv_msg, size));
+
 
     return 0;
 }
