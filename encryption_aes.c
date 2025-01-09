@@ -324,7 +324,7 @@ void decrypt_aes(uint8_t* padded, int paddedSize, uint8_t* key){
 int test_aes(){
     uint8_t* cipher;
     int cipherSize;
-    char* msg = "a";
+    char* msg = "hello world, this is scarf";
     int size = strlen(msg);
 
 

@@ -1,5 +1,5 @@
 /*
-gcc encryption.c -o encryption -lgmp
+gcc rsa.c -o rsa -lgmp && ./rsa
 */
 #include "rsa.h"
 
@@ -65,33 +65,53 @@ int keyGen(mpz_t n, mpz_t e, mpz_t d){
     return 0;
 }
 
-int encrypt_rsa(int* plaintext, mpz_t e, mpz_t n, mpz_t y){
+int encrypt_rsa(uint8_t* key, int size, mpz_t e, mpz_t n, mpz_t y){
     mpz_t x;
+    mpz_t currentByte;
     mpz_init(x);
-    mpz_set_ui(x, *plaintext);
+    mpz_init(currentByte);
+    mpz_set_ui(x, *(key));
+    for(int byte = 1; byte < size; byte++){
+        mpz_mul_ui(x, x, 256);
+        mpz_add_ui(x, x, *(key+byte));
+    }
+    //mpz_out_str(stdout,16,x);
     mpz_powm(y, x, e, n);
     return 0;
 }
 
-int decrypt_rsa(mpz_t y, mpz_t d, mpz_t n, int *plaintext){
+int decrypt_rsa(mpz_t y, mpz_t d, mpz_t n, uint8_t *key, int size){
+    uint8_t current;
     mpz_t x;
+    mpz_t temp;
     mpz_init(x);
+    mpz_init(temp);
     mpz_powm(x, y, d, n);
-    *plaintext = mpz_get_ui(x);
+
+    for(int z = size-1; z >=0; z--){
+        mpz_set(temp, x);
+        mpz_div_ui(temp, temp, 256);
+        mpz_mul_ui(temp, temp, 256);
+        mpz_sub(temp, x, temp);
+        current = mpz_get_ui(temp);
+        *(key+z) = current;
+        printf("%c ", *(key+z));
+
+        mpz_div_ui(x, x, 256);
+    }
     return 0;
 }
 
 
 
 int test_rsa(){
-
     mpz_t n, d, e;
+    int size;
     mpz_init(n);
     mpz_init(d);
     mpz_init(e);
     mpz_set_ui(e, 65537);
     keyGen(n, e, d);
-
 
     // mpz_out_str(stdout,10, n);
     // printf("\n");
@@ -100,73 +120,17 @@ int test_rsa(){
     //bob:
     mpz_t y;
     mpz_init(y);
-    int* send_msg = (int*)malloc(sizeof(int));
-    *send_msg = 968;
-    encrypt_rsa(send_msg, e, n, y);
+    uint8_t send_msg[] = "2b329823adf121cc";
+    size = strlen((char*)send_msg);
+    encrypt_rsa(send_msg, size, e, n, y);
 
     //alice:
-    int* recv_msg = (int*)malloc(sizeof(int));
+    uint8_t *recv_msg = calloc(MSG_LEN_LIMIT, sizeof(char));
     
-    decrypt_rsa(y, d, n, recv_msg);
-    printf("received: %d\n", *recv_msg);
-
-    free(recv_msg);
-    free(send_msg);
-    return 0;
-}
-
-int reference(){
-    char inputStr[1024];
-    /*
-    mpz_t is the type defined for GMP integers.
-    It is a pointer to the internals of the GMP integer data structure
-    */
-    mpz_t n;
-    int flag;
-
-    printf ("Enter your number: ");
-    scanf("%1023s" , inputStr); /* NOTE: never every write a call scanf ("%s", inputStr);
-                                You are leaving a security hole in your code. */
-
-    /* 1. Initialize the number */
-    mpz_init(n);
-    mpz_set_ui(n,0);
-
-    /* 2. Parse the input string as a base 10 number */
-    flag = mpz_set_str(n,inputStr, 10);
-    assert (flag == 0); /* If flag is not 0 then the operation failed */
-
-    /* Print n */
-    printf ("n = ");
-    mpz_out_str(stdout,10,n);
-    printf ("\n");
-
-    /* 3. Add one to the number */
-
-    mpz_add_ui(n,n,1); /* n = n + 1 */
-
-    /* 4. Print the result */
-
-    printf (" n +1 = ");
-    mpz_out_str(stdout,10,n);
-    printf ("\n");
-
-
-    /* 5. Square n+1 */
-
-    mpz_mul(n,n,n); /* n = n * n */
-
-
-    printf (" (n +1)^2 = ");
-    mpz_out_str(stdout,10,n);
-    printf ("\n");
-
-
-    /* 6. Clean up the mpz_t handles or else we will leak memory */
-    mpz_clear(n);
+    decrypt_rsa(y, d, n, recv_msg, size);
+    printf("\nreceived: %s\n", recv_msg);
 
     return 0;
-
 }
 
 
