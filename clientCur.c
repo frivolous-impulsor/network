@@ -233,7 +233,6 @@ void* talk(void* args){
                 }
                 cipher = encrypt_aes(msg, size, key, &cipherSize);
 
-                //send(*( targs->sockfd ), cipher, MSG_LEN_LIMIT, 0);
                 sendAll(*( targs->sockfd ), (char*)cipher, MSG_LEN_LIMIT);
                 cipherDistroy(cipher);
                 //integrate the first letter to rest of msg
@@ -513,7 +512,7 @@ void recvKeyAES(uint8_t* key, int* fd){
 
     char n_str[MSG_LEN_LIMIT];
     mpz_get_str(n_str, 10, n);
-    send(*fd, n_str, MSG_LEN_LIMIT, 0);
+    sendAll(*fd, n_str, MSG_LEN_LIMIT);
 
 
     // printf("sent n:\n");
@@ -524,9 +523,9 @@ void recvKeyAES(uint8_t* key, int* fd){
 
     mpz_set_str(y, enc_key_str, 10);
 
-    decrypt_rsa(y, );
+    decrypt_rsa(y, d, n, key, AES_KEY_SIZE);
     //recv(*fd, key, MSG_LEN_LIMIT, 0);
-    strcpy((char*)key, "f18272972dfabf12");
+    //strcpy((char*)key, "f18272972dfabf12");
 
 }
 
@@ -545,7 +544,7 @@ void sendKeyAES(uint8_t* key, int*fd){
 
     char enc_key_str[MSG_LEN_LIMIT];
     mpz_get_str(enc_key_str, 10, y);
-    send(*fd, enc_key_str, MSG_LEN_LIMIT, 0);
+    sendAll(*fd, enc_key_str, MSG_LEN_LIMIT);
 
 }
 
@@ -588,8 +587,8 @@ int main(int argc, char *argv[]){
     }else{
         //client: generate key, send key
 
-        //genKeyForAES(key, AES_KEY_SIZE);
-        strcpy((char*)key, "f18272972dfabf12");
+        genKeyForAES(key, AES_KEY_SIZE);
+        //strcpy((char*)key, "f18272972dfabf12");
         sendKeyAES(key, fd);
         
 
